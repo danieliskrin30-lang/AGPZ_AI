@@ -1,0 +1,70 @@
+{
+  "h2s_out_ppm": {
+    "mae": 0.08899788171092422,
+    "r2": 0.9545964793709848,
+    "bool_acc_within_10pct": 0.9058641975308642
+  },
+  "c3_carryover_g_m3": {
+    "mae": 0.017745589404262935,
+    "r2": 0.9551537003192516,
+    "bool_acc_within_10pct": 0.9583333333333334
+  },
+  "dew_point_c": {
+    "mae": 0.2637729689948413,
+    "r2": 0.993634867344656,
+    "bool_acc_within_10pct": 0.9660493827160493
+  },
+  "shflu_purity_pct": {
+    "mae": 0.0604183232818649,
+    "r2": 0.8128914126054161,
+    "bool_acc_within_10pct": 1.0
+  },
+  "hours_to_offspec": {
+    "mae_hours": 8.966834548768805,
+    "r2": 0.4034440985706246
+  },
+  "offspec_8h": {
+    "auc": 0.9617408906882591,
+    "precision": 0.9076923076923077,
+    "recall": 0.7564102564102564,
+    "f1": 0.8251748251748252,
+    "positives_test": 78
+  },
+  "offspec_24h": {
+    "auc": 0.7773672687465789,
+    "precision": 0.625,
+    "recall": 0.5158730158730159,
+    "f1": 0.5652173913043478,
+    "positives_test": 126
+  },
+  "dataset": {
+    "hours": 2160,
+    "train": 1512,
+    "test": 648,
+    "offspec_share_pct": 12.55,
+    "features": 26,
+    "split": "по времени: первые 70% — обучение, последние 30% — проверка"
+  },
+  "thresholds": {
+    "h2s_out_ppm": {
+      "direction": "max",
+      "limit": 4.0,
+      "unit": "ppm"
+    },
+    "c3_carryover_g_m3": {
+      "direction": "max",
+      "limit": 0.8,
+      "unit": "г/м³"
+    },
+    "dew_point_c": {
+      "direction": "max",
+      "limit": -10.0,
+      "unit": "°C"
+    },
+    "shflu_purity_pct": {
+      "direction": "min",
+      "limit": 97.0,
+      "unit": "%"
+    }
+  }
+}

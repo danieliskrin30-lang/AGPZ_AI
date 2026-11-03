@@ -1,0 +1,1004 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+<title>НТС-1 · Мнемосхема ИИ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: ISA-101 «серая» мнемосхема узла в центре; справа карточка объекта + ИИ-технолог; снизу оптимизатор и журнал. Цвет только для отклонений и ИИ. */
+:root{
+  --bg:#dde1e4; --surface:#eef0f2; --surface-2:#e5e8eb; --rule:#c3c9cf; --fg:#1b2127; --muted:#5a636c;
+  --pipe:#6c757e; --pipe-cold:#4f7aa3; --equip:#38414a; --equip-fill:#f6f7f8; --grid:rgba(27,33,39,.045);
+  --ai:#5a44c8; --ai-soft:rgba(90,68,200,.12); --warn:#a96d00; --warn-soft:rgba(214,150,0,.18);
+  --crit:#c22828; --crit-soft:rgba(194,40,40,.14); --ok:#2a7649;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-label:"IBM Plex Sans Condensed","IBM Plex Sans","Arial Narrow",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14181c; --surface:#1c2126; --surface-2:#232a30; --rule:#333b43; --fg:#e3e7eb; --muted:#96a0aa;
+  --pipe:#89939d; --pipe-cold:#7ea6cd; --equip:#b8c1ca; --equip-fill:#1e242a; --grid:rgba(227,231,235,.035);
+  --ai:#a897ff; --ai-soft:rgba(168,151,255,.16); --warn:#f0b43a; --warn-soft:rgba(240,180,58,.16);
+  --crit:#ff625a; --crit-soft:rgba(255,98,90,.16); --ok:#5cc48d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181c; --surface:#1c2126; --surface-2:#232a30; --rule:#333b43; --fg:#e3e7eb; --muted:#96a0aa;
+  --pipe:#89939d; --pipe-cold:#7ea6cd; --equip:#b8c1ca; --equip-fill:#1e242a; --grid:rgba(227,231,235,.035);
+  --ai:#a897ff; --ai-soft:rgba(168,151,255,.16); --warn:#f0b43a; --warn-soft:rgba(240,180,58,.16);
+  --crit:#ff625a; --crit-soft:rgba(255,98,90,.16); --ok:#5cc48d; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-body);font-size:14px;line-height:1.45;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 28px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.lbl{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:var(--muted);font-weight:600}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+.ident h1{margin:0;font-family:var(--f-label);font-weight:600;font-size:22px;letter-spacing:.01em;text-wrap:balance}
+.ident p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.clock{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--surface)}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:beat 1s infinite}
+@keyframes beat{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}100%{box-shadow:0 0 0 7px transparent}}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:6px 10px;cursor:pointer;font-size:12.5px;border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg button:hover:not([aria-pressed="true"]){background:var(--surface-2)}
+
+/* kpi */
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.kpi{background:var(--surface);padding:9px 12px;min-width:0;position:relative}
+.kpi .v{font-family:var(--f-num);font-size:20px;font-weight:600;margin-top:2px;white-space:nowrap}
+.kpi .v small{font-size:12px;color:var(--muted);font-weight:400;margin-left:3px}
+.kpi .s{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi[data-st="warn"]{box-shadow:inset 3px 0 0 var(--warn)}
+.kpi[data-st="crit"]{box-shadow:inset 3px 0 0 var(--crit)}
+.kpi[data-st="ai"]{box-shadow:inset 3px 0 0 var(--ai)}
+.kpi[data-st="crit"] .v{color:var(--crit)}
+
+/* main grid */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:8px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--rule)}
+.panel-h h2{margin:0;font-size:13px;font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.panel-h span{font-size:12px;color:var(--muted)}
+.scheme-wrap{overflow-x:auto}
+#scheme{display:block;width:100%;min-width:900px;height:auto}
+.lower{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px;margin-top:12px}
+.side{display:flex;flex-direction:column;gap:12px;position:sticky;top:max(12px,env(safe-area-inset-top,0px))}
+
+/* svg schematic */
+.pipe{fill:none;stroke:var(--pipe);stroke-width:3;stroke-linejoin:round}
+.pipe.cold{stroke:var(--pipe-cold)}
+.pipe.liq{stroke-width:3}
+.flow{fill:none;stroke:var(--surface);stroke-width:1.6;stroke-dasharray:3 15;animation:flow 1.4s linear infinite;opacity:.9}
+.flow.slow{animation-duration:2.6s}
+@keyframes flow{to{stroke-dashoffset:-18}}
+.sig{fill:none;stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3;opacity:.7}
+.eq{fill:var(--equip-fill);stroke:var(--equip);stroke-width:1.6}
+.eq-t{font-family:var(--f-label);font-size:12px;font-weight:600;fill:var(--fg)}
+.eq-s{font-family:var(--f-label);font-size:10.5px;fill:var(--muted)}
+.hit{cursor:pointer}
+.hit:hover .eq,.hit:focus-visible .eq{stroke:var(--ai);stroke-width:2.2}
+.hit.sel .eq{stroke:var(--ai);stroke-width:2.4}
+.stem{stroke:var(--muted);stroke-width:1}
+.inst circle.b{fill:var(--equip-fill);stroke:var(--equip);stroke-width:1.4}
+.inst.virtual circle.b{stroke:var(--ai);stroke-dasharray:3 2.5;fill:var(--ai-soft)}
+.inst .tg{font-family:var(--f-label);font-size:10.5px;font-weight:600;fill:var(--fg);text-anchor:middle}
+.inst .vb{fill:var(--surface);stroke:var(--rule);stroke-width:1}
+.inst .vt{font-family:var(--f-num);font-size:11.5px;fill:var(--fg);text-anchor:middle}
+.inst .halo{fill:none;stroke:transparent;stroke-width:3}
+.inst:focus,.hit:focus{outline:none}
+.inst:hover circle.b,.inst:focus-visible circle.b{stroke:var(--ai);stroke-width:2.2}
+.inst:focus-visible .halo{stroke:var(--ai);stroke-dasharray:3 3}
+.inst.sel .halo{stroke:var(--ai);stroke-width:2}
+.inst[data-st="warn"] .vb{fill:var(--warn-soft);stroke:var(--warn)}
+.inst[data-st="crit"] .vb{fill:var(--crit-soft);stroke:var(--crit)}
+.inst[data-st="ai"] .vb{fill:var(--ai-soft);stroke:var(--ai)}
+.inst[data-st="crit"] .vt,.inst[data-st="crit"] .tg{fill:var(--crit)}
+.inst .alm{display:none}
+.inst[data-st="warn"] .alm,.inst[data-st="crit"] .alm,.inst[data-st="ai"] .alm{display:block}
+.alm path{stroke:none}
+.inst[data-st="warn"] .alm path{fill:var(--warn)}
+.inst[data-st="crit"] .alm path{fill:var(--crit)}
+.inst[data-st="ai"] .alm path{fill:var(--ai)}
+.inst[data-st="crit"] .alm{animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.liquid{fill:var(--pipe-cold);opacity:.22}
+.demister{fill:url(#hatch);stroke:var(--equip);stroke-width:1}
+.flame{fill:var(--warn);opacity:.85;transform-origin:1090px 182px;animation:flick 1.2s ease-in-out infinite alternate}
+@keyframes flick{to{transform:scaleY(1.12) scaleX(.92)}}
+.conn{fill:var(--surface-2);stroke:var(--equip);stroke-width:1.2}
+.conn-t{font-family:var(--f-label);font-size:10.5px;fill:var(--muted)}
+
+/* detail card */
+.card-b{padding:12px}
+.ctag{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ctag .t{font-family:var(--f-num);font-size:18px;font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid var(--rule);color:var(--muted);white-space:nowrap}
+.pill[data-st="ok"]{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
+.pill[data-st="warn"]{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.pill[data-st="crit"]{color:var(--crit);border-color:var(--crit);background:var(--crit-soft)}
+.pill[data-st="ai"],.pill.v{color:var(--ai);border-color:var(--ai);background:var(--ai-soft)}
+.cname{margin:3px 0 10px;font-weight:500}
+.big{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.big .v{font-family:var(--f-num);font-size:32px;font-weight:600;line-height:1}
+.big .u{color:var(--muted)}
+.big .d{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.trend{width:100%;height:auto;display:block;border:1px solid var(--rule);border-radius:6px;background:var(--surface-2)}
+.meta{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:10px 0 0;font-size:12.5px}
+.meta dt{color:var(--muted)}
+.meta dd{margin:0;font-family:var(--f-num);font-size:12px}
+.diag{margin-top:10px;padding:9px 10px;border-radius:6px;background:var(--surface-2);font-size:12.5px}
+.diag b{font-weight:600}
+.insight{margin-top:10px;padding:9px 10px;border-radius:6px;background:var(--ai-soft);border:1px solid color-mix(in srgb,var(--ai) 35%,transparent);font-size:12.5px}
+.insight .lbl{color:var(--ai)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:var(--surface);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12.5px;font-weight:500}
+.btn:hover{background:var(--surface-2)}
+.btn.ai{border-color:var(--ai);color:var(--ai)}
+.btn.ai:hover{background:var(--ai-soft)}
+.btn.prim{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.links button{font-family:var(--f-num);font-size:11.5px;padding:3px 7px;border-radius:4px;border:1px solid var(--rule);background:var(--surface-2);cursor:pointer}
+
+/* chat */
+.chat{display:flex;flex-direction:column;height:470px}
+.msgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.m{max-width:94%;font-size:13px;line-height:1.5}
+.m.u{align-self:flex-end;background:var(--fg);color:var(--bg);padding:7px 10px;border-radius:10px 10px 2px 10px}
+.m.a{align-self:flex-start;background:var(--surface-2);padding:8px 10px;border-radius:2px 10px 10px 10px;border-left:2px solid var(--ai)}
+.m.a.alert{border-left-color:var(--crit);background:var(--crit-soft)}
+.m.a.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.m .who{display:block;font-family:var(--f-label);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ai);font-weight:600;margin-bottom:2px}
+.m.alert .who{color:var(--crit)} .m.warn .who{color:var(--warn)}
+.m .src{display:block;margin-top:5px;font-size:11px;color:var(--muted)}
+.m p{margin:0 0 4px} .m p:last-child{margin:0}
+.m .tl{font-family:var(--f-num);font-size:12px;cursor:pointer;color:var(--ai);text-decoration:underline;text-underline-offset:2px}
+.typing{display:inline-flex;gap:3px}.typing i{width:5px;height:5px;border-radius:50%;background:var(--ai);animation:dot 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes dot{50%{opacity:.2}}
+.quick{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0;border-top:1px solid var(--rule)}
+.quick button{font-size:12px;padding:4px 8px;border-radius:99px;border:1px solid var(--rule);background:var(--surface);cursor:pointer}
+.quick button:hover{border-color:var(--ai);color:var(--ai)}
+.ask{display:flex;gap:6px;padding:8px 12px 12px}
+.ask input{flex:1;min-width:0;border:1px solid var(--rule);background:var(--surface-2);border-radius:6px;padding:8px 10px;font:inherit;font-size:13px;color:var(--fg)}
+.ctx{font-size:11.5px;color:var(--muted);padding:6px 12px 0}
+.ctx b{color:var(--ai);font-family:var(--f-num);font-weight:600}
+
+/* optimizer + log */
+.opt-b{padding:10px 12px 12px}
+.opt-row{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;margin-bottom:8px}
+.opt-row .k{font-size:12px;color:var(--muted)}
+.opt-row .x{font-family:var(--f-num);font-weight:600;font-size:16px}
+.opt-row .x.rec{color:var(--ai)}
+#optc{width:100%;height:auto;display:block}
+.opt-note{font-size:12.5px;margin:8px 0 10px}
+.log{max-height:300px;overflow-y:auto}
+.log table{width:100%;border-collapse:collapse;font-size:12.5px}
+.log td{padding:6px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+.log td:first-child{font-family:var(--f-num);font-size:11.5px;color:var(--muted);white-space:nowrap;width:1%}
+.src-tag{font-family:var(--f-label);font-size:10.5px;font-weight:600;letter-spacing:.05em;padding:1px 6px;border-radius:3px;white-space:nowrap}
+.src-tag.ai{color:var(--ai);background:var(--ai-soft)}
+.src-tag.scada{color:var(--warn);background:var(--warn-soft)}
+.src-tag.crit{color:var(--crit);background:var(--crit-soft)}
+.src-tag.bal{color:var(--fg);background:var(--surface-2)}
+.empty{padding:14px 12px;color:var(--muted);font-size:12.5px}
+.foot{margin-top:14px;font-size:12px;color:var(--muted);max-width:110ch}
+
+@media (max-width:1180px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.side,.lower{grid-template-columns:minmax(0,1fr);display:grid}.chat{height:440px}.kpi .v{font-size:17px}}
+@media (prefers-reduced-motion:reduce){.flow,.flame,.pulse,.inst[data-st="crit"] .alm,.typing i{animation:none}}
+</style>
+
+<header class="top">
+  <div class="ident">
+    <div class="lbl">ГПЗ · Уровень 2 · Мнемосхема узла</div>
+    <h1>Установка НТС-1 · низкотемпературная сепарация</h1>
+    <p>Извлечение C₃+ из осушенного газа в ШФЛУ. Нажмите на любой датчик или аппарат.</p>
+  </div>
+  <div class="ctrl">
+    <div class="clock" title="Время процесса в симуляторе"><span class="pulse" aria-hidden="true"></span><span class="num" id="clock">Сутки 1 · 06:00</span><span class="lbl" style="margin-left:4px">1 с = 10 мин</span></div>
+    <div class="seg" role="group" aria-label="Сценарий">
+      <button id="sc-normal" data-sc="normal" aria-pressed="true">Норма</button>
+      <button id="sc-bearing" data-sc="bearing" aria-pressed="false">Износ подшипника К-101</button>
+      <button id="sc-fouling" data-sc="fouling" aria-pressed="false">Забивка демистера</button>
+      <button id="sc-chiller" data-sc="chiller" aria-pressed="false">Отказ холодильника</button>
+      <button id="sc-drift" data-sc="drift" aria-pressed="false">Дрейф FT-101</button>
+    </div>
+    <div class="seg" role="group" aria-label="Скорость">
+      <button id="sp-pause" data-sp="0" aria-pressed="false">Пауза</button>
+      <button id="sp-1" data-sp="1" aria-pressed="true">×1</button>
+      <button id="sp-4" data-sp="4" aria-pressed="false">×4</button>
+    </div>
+  </div>
+</header>
+
+<section class="kpis" aria-label="Ключевые показатели узла">
+  <div class="kpi" id="k-c3"><div class="lbl">Унос C₃+ · ИИ</div><div class="v"></div><div class="s"></div></div>
+  <div class="kpi" id="k-pur"><div class="lbl">Чистота ШФЛУ · ИИ</div><div class="v"></div><div class="s"></div></div>
+  <div class="kpi" id="k-fore"><div class="lbl">До выхода за норму</div><div class="v"></div><div class="s"></div></div>
+  <div class="kpi" id="k-bal"><div class="lbl">Баланс узла</div><div class="v"></div><div class="s"></div></div>
+  <div class="kpi" id="k-rul"><div class="lbl">Ресурс К-101</div><div class="v"></div><div class="s"></div></div>
+  <div class="kpi" id="k-loss"><div class="lbl">Потери продукта</div><div class="v"></div><div class="s"></div></div>
+</section>
+
+<div class="grid">
+  <main style="min-width:0">
+    <section class="panel">
+      <div class="panel-h"><h2>Технологическая схема</h2><span>серый — норма · цвет — отклонение · пунктир — виртуальный анализатор ИИ</span></div>
+      <div class="scheme-wrap">
+      <svg id="scheme" viewBox="0 0 1180 560" role="img" aria-label="Мнемосхема установки НТС-1">
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="var(--grid)" stroke-width="1"/></pattern>
+          <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--equip-fill)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--equip)" stroke-width="1.2"/></pattern>
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="var(--pipe)"/></marker>
+          <marker id="arrc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="var(--pipe-cold)"/></marker>
+        </defs>
+        <rect width="1180" height="560" fill="url(#grid)"/>
+
+        <!-- трубы: сырьё -->
+        <path class="pipe" d="M74 300H118"/>
+        <path class="pipe" d="M182 300H290"/>
+        <path class="pipe" d="M410 300H480"/>
+        <path class="pipe cold" d="M580 300H628"/>
+        <path class="pipe cold" d="M652 300H743" marker-end="url(#arrc)"/>
+        <!-- холодный газ из сепаратора обратно в Т-101 -->
+        <path class="pipe cold" d="M800 150V96H370V268" marker-end="url(#arrc)"/>
+        <!-- товарный газ -->
+        <path class="pipe" d="M330 270V56H1098" marker-end="url(#arr)"/>
+        <!-- ШФЛУ -->
+        <path class="pipe cold liq" d="M800 440V490H908"/>
+        <path class="pipe cold liq" d="M952 490H1008"/>
+        <path class="pipe cold liq" d="M1032 490H1098" marker-end="url(#arrc)"/>
+        <!-- факел -->
+        <path class="pipe" d="M855 230H948"/>
+        <path class="pipe" d="M972 230H1090V196"/>
+        <!-- пропан -->
+        <path class="pipe" d="M560 420V332" marker-end="url(#arr)"/>
+
+        <!-- анимация потока -->
+        <path class="flow" d="M74 300H118M182 300H290M410 300H480M580 300H628M652 300H743"/>
+        <path class="flow" d="M800 150V96H370V268"/>
+        <path class="flow" d="M330 270V56H1098"/>
+        <path class="flow slow" d="M800 440V490H908M952 490H1008M1032 490H1098"/>
+        <path class="flow slow" id="flareflow" d="M855 230H948M972 230H1090V196"/>
+
+        <!-- сигнальные линии регуляторов -->
+        <path class="sig" d="M681 252H660"/>
+        <path class="sig" d="M924 380H1020V478"/>
+
+        <!-- граничные соединители -->
+        <g><path class="conn" d="M14 285H62L74 300L62 315H14Z"/><text class="conn-t" x="44" y="334" text-anchor="middle">от блока</text><text class="conn-t" x="44" y="347" text-anchor="middle">осушки</text></g>
+        <g><path class="conn" d="M1100 41H1158L1170 56L1158 71H1100Z"/><text class="conn-t" x="1170" y="88" text-anchor="end">Товарный газ → МГ</text></g>
+        <g><path class="conn" d="M1100 475H1158L1170 490L1158 505H1100Z"/><text class="conn-t" x="1170" y="522" text-anchor="end">ШФЛУ → ГФУ</text></g>
+        <g><text class="conn-t" x="560" y="438" text-anchor="middle">пропан от холодильной установки</text></g>
+
+        <!-- оборудование -->
+        <g class="hit" data-eq="K-101" tabindex="0" role="button" aria-label="Компрессор К-101">
+          <circle class="eq" cx="150" cy="300" r="32"/>
+          <path d="M126 279L174 289M126 321L174 311" stroke="var(--equip)" stroke-width="1.6" fill="none"/>
+          <text class="eq-t" x="150" y="351" text-anchor="middle">К-101</text>
+        </g>
+        <g class="hit" data-eq="T-101" tabindex="0" role="button" aria-label="Теплообменник Т-101">
+          <rect class="eq" x="290" y="270" width="120" height="60" rx="6"/>
+          <path d="M300 300l10-14l10 28l10-28l10 28l10-28l10 28l10-28l10 28l10-14" fill="none" stroke="var(--equip)" stroke-width="1.3"/>
+          <text class="eq-t" x="350" y="350" text-anchor="middle">Т-101</text><text class="eq-s" x="350" y="363" text-anchor="middle">газ–газ</text>
+        </g>
+        <g class="hit" data-eq="X-101" tabindex="0" role="button" aria-label="Пропановый холодильник Х-101">
+          <rect class="eq" x="480" y="270" width="100" height="60" rx="6"/>
+          <path d="M490 285H570M490 300H570M490 315H570" stroke="var(--pipe-cold)" stroke-width="1.2"/>
+          <text class="eq-t" x="530" y="350" text-anchor="middle">Х-101</text><text class="eq-s" x="530" y="363" text-anchor="middle">пропановый</text>
+        </g>
+        <g class="hit" data-eq="TV-101v" tabindex="-1">
+          <path class="eq" d="M628 288L652 312V288L628 312Z"/>
+          <path d="M640 300V278" stroke="var(--equip)" stroke-width="1.4"/><rect class="eq" x="632" y="270" width="16" height="8" rx="2"/>
+        </g>
+        <g class="hit" data-eq="C-101" tabindex="0" role="button" aria-label="Сепаратор С-101">
+          <rect class="eq" x="745" y="150" width="110" height="290" rx="50"/>
+          <rect class="liquid" id="liq" x="746" y="330" width="108" height="109" rx="0"/>
+          <rect class="demister" x="752" y="185" width="96" height="14"/>
+          <text class="eq-t" x="800" y="250" text-anchor="middle">С-101</text>
+          <text class="eq-s" x="800" y="264" text-anchor="middle">НТС</text>
+          <text class="eq-s" x="800" y="212" text-anchor="middle">демистер</text>
+        </g>
+        <g class="hit" data-eq="N-101" tabindex="0" role="button" aria-label="Насос ШФЛУ Н-101">
+          <circle class="eq" cx="930" cy="490" r="22"/>
+          <path d="M930 468L952 490L930 512" fill="none" stroke="var(--equip)" stroke-width="1.4"/>
+          <text class="eq-t" x="930" y="530" text-anchor="middle">Н-101</text>
+        </g>
+        <g><path class="eq" d="M1008 478L1032 502V478L1008 502Z"/><text class="eq-s" x="1020" y="522" text-anchor="middle">LV-101</text></g>
+        <g><path class="eq" d="M948 218L972 242V218L948 242Z"/><text class="eq-s" x="960" y="258" text-anchor="middle">PV-101</text></g>
+        <g class="hit" data-eq="FL-1" tabindex="0" role="button" aria-label="Факел">
+          <rect class="eq" x="1082" y="196" width="16" height="36"/>
+          <path class="flame" id="flame" d="M1090 196c-8-8-6-16 0-26c6 10 8 18 0 26z"/>
+          <text class="eq-s" x="1112" y="226">факел</text>
+        </g>
+        <g id="insts"></g>
+      </svg>
+      </div>
+    </section>
+
+    <div class="lower">
+      <section class="panel" aria-labelledby="opt-h">
+        <div class="panel-h"><h2 id="opt-h">Оптимизатор режима · M4</h2><span>«ровно столько, сколько нужно»</span></div>
+        <div class="opt-b">
+          <div class="opt-row">
+            <div><div class="k">Уставка TT-104 сейчас</div><div class="x num" id="o-cur"></div></div>
+            <div><div class="k">Рекомендация ИИ</div><div class="x num rec" id="o-rec"></div></div>
+            <div><div class="k" id="o-effk">Эффект</div><div class="x num" id="o-eff"></div></div>
+          </div>
+          <svg id="optc" viewBox="0 0 520 210" role="img" aria-label="Унос C3+ в зависимости от температуры сепарации"></svg>
+          <p class="opt-note" id="o-note"></p>
+          <button class="btn prim" id="o-apply">Оператор принимает уставку</button>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="log-h">
+        <div class="panel-h"><h2 id="log-h">Журнал событий</h2><span>ИИ · SCADA · Баланс</span></div>
+        <div class="log" id="log"><div class="empty">Событий нет. Выберите сценарий сверху, чтобы увидеть, как ИИ замечает проблему раньше штатной сигнализации.</div></div>
+      </section>
+    </div>
+  </main>
+
+  <aside class="side">
+    <section class="panel" aria-live="polite" id="card"></section>
+    <section class="panel chat" aria-labelledby="chat-h">
+      <div class="panel-h"><h2 id="chat-h">ИИ-технолог узла</h2><span class="pill" id="llm-pill" title="">проверяю модель…</span></div>
+      <div class="msgs" id="msgs"></div>
+      <div class="ctx" id="ctx"></div>
+      <div class="quick" id="quick">
+        <button data-q="Сводка по узлу">Сводка</button>
+        <button data-q="Почему меняется унос C3+?">Почему унос?</button>
+        <button data-q="Что делать сейчас?">Что делать?</button>
+        <button data-q="Проверь баланс расходомеров">Баланс</button>
+        <button data-q="Ресурс компрессора К-101">Ресурс К-101</button>
+      </div>
+      <form class="ask" id="ask"><input id="q" placeholder="Спросите про датчик, аппарат или процесс…" autocomplete="off" aria-label="Вопрос ИИ-технологу"><button class="btn ai" type="submit">Спросить</button></form>
+    </section>
+  </aside>
+</div>
+
+<p class="foot">Демонстрация на симуляторе: физическая модель процесса и типовые значения, не данные завода. Платформа работает только на чтение и советует; уставку меняет оператор. Ответы ИИ-технолога формулирует локальная модель Qwen2.5 через Ollama, без интернета. Каждое число в ответе сверяется с данными узла; если модель придумала число, показывается шаблонный ответ. Без сервера страница работает на шаблонах.</p>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmt=(v,d=1)=>Number(v).toFixed(d).replace('.',',').replace('-','−');
+const fmtI=v=>Math.round(v).toLocaleString('ru-RU').replace(/ /g,' ');
+let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
+const gauss=()=>{let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+
+/* ---------- метаданные датчиков ---------- */
+const S={
+ 'FT-090':{name:'Расход газа с блока осушки',unit:'т/ч',dec:1,lim:{L:60,H:95},type:'Ультразвуковой расходомер',place:'Граница блока осушки, Ду300',inst:'14.08.2019',cal:'10.06.2026',next:'10.06.2027',acc:'±1,0 %',range:'0–120 т/ч',x:44,y:245,bx:44,by:207,px:44,py:285,flow:true,
+   about:'Независимый прибор на том же потоке, что FT-101. Ядро баланса сравнивает их между собой и с выходами узла.'},
+ 'FT-101':{name:'Расход газа на входе НТС',unit:'т/ч',dec:1,lim:{L:60,H:95},type:'Вихревой расходомер',place:'Нагнетание К-101, Ду300',inst:'02.03.2017',cal:'21.11.2025',next:'21.11.2026',acc:'±1,0 %',range:'0–120 т/ч',x:235,y:245,bx:235,by:207,px:235,py:300,flow:true,
+   about:'Основной прибор учёта сырья на входе узла.'},
+ 'VT-101':{name:'Вибрация подшипника К-101',unit:'мм/с',dec:2,lim:{H:4.5,HH:7.1},type:'Пьезоэлектрический вибродатчик',place:'Опорный подшипник К-101',inst:'11.05.2021',cal:'15.04.2026',next:'15.04.2027',acc:'±5 %',range:'0–20 мм/с СКЗ',x:130,y:225,bx:130,by:187,px:140,py:268,vib:true,
+   about:'Границы зон по ISO 10816-3: 4,5 мм/с — предупреждение, 7,1 мм/с — недопустимая вибрация.'},
+ 'IT-101':{name:'Ток двигателя К-101',unit:'А',dec:0,lim:{H:150,HH:165},type:'Трансформатор тока',place:'Ячейка КРУ 6 кВ',inst:'11.05.2021',cal:'15.04.2026',next:'15.04.2027',acc:'±0,5 %',range:'0–250 А',x:170,y:385,bx:170,by:425,px:160,py:331},
+ 'TT-102':{name:'Температура газа после Т-101',unit:'°C',dec:1,lim:{H:-2},type:'Термопреобразователь Pt100',place:'Выход трубного пучка Т-101',inst:'09.09.2018',cal:'03.02.2026',next:'03.02.2027',acc:'±0,3 °C',range:'−60…+60 °C',x:445,y:245,bx:445,by:207,px:445,py:300},
+ 'TT-103':{name:'Температура пропана в Х-101',unit:'°C',dec:1,lim:{H:-39,HH:-36},type:'Термопреобразователь Pt100',place:'Межтрубное пространство Х-101',inst:'09.09.2018',cal:'03.02.2026',next:'03.02.2027',acc:'±0,3 °C',range:'−60…+40 °C',x:605,y:392,bx:668,by:392,px:560,py:392},
+ 'TV-101':{name:'Открытие регулирующего клапана',unit:'%',dec:0,lim:{H:90,HH:98},type:'Позиционер клапана',place:'TV-101, контур TIC-104',inst:'20.06.2020',cal:'—',next:'—',acc:'±1 %',range:'0–100 %',x:640,y:225,bx:640,by:345,px:640,py:262,
+   about:'Клапан держит температуру сепарации по сигналу TT-104. Если он открыт почти полностью, у контура не остаётся запаса.'},
+ 'TT-104':{name:'Температура сепарации',unit:'°C',dec:1,lim:{L:-38,H:-30,HH:-28},type:'Термопреобразователь Pt100',place:'С-101, газовая зона',inst:'09.09.2018',cal:'03.02.2026',next:'03.02.2027',acc:'±0,3 °C',range:'−60…+40 °C',x:700,y:252,bx:700,by:214,px:745,py:252,sp:true,
+   about:'Главный рычаг извлечения C₃+: холоднее — больше C₃+ уходит в ШФЛУ, но дороже холод и ниже чистота ШФЛУ.'},
+ 'PDT-101':{name:'Перепад давления на демистере',unit:'кПа',dec:1,lim:{H:6,HH:8},type:'Датчик дифференциального давления',place:'С-101, над/под демистером',inst:'17.10.2022',cal:'01.09.2026',next:'01.09.2027',acc:'±0,1 %',range:'0–25 кПа',x:905,y:180,bx:975,by:180,px:855,py:192,
+   about:'Рост перепада означает загрязнение сетки демистера: капли C₃+ начинают проскакивать в товарный газ.'},
+ 'PT-103':{name:'Давление в С-101',unit:'МПа',dec:2,lim:{L:4.4,H:4.9,HH:5.1},type:'Датчик избыточного давления',place:'С-101, газовая зона',inst:'17.10.2022',cal:'01.09.2026',next:'01.09.2027',acc:'±0,075 %',range:'0–10 МПа',x:905,y:300,bx:970,by:300,px:855,py:300},
+ 'LT-101':{name:'Уровень жидкости в С-101',unit:'%',dec:0,lim:{LL:10,L:20,H:75,HH:85},type:'Радарный уровнемер',place:'С-101, кубовая часть',inst:'17.10.2022',cal:'01.09.2026',next:'01.09.2027',acc:'±2 мм',range:'0–100 %',x:905,y:380,bx:970,by:380,px:855,py:380,
+   about:'Уровень держит клапан LV-101 на линии ШФЛУ.'},
+ 'FT-104':{name:'Расход товарного газа',unit:'т/ч',dec:1,lim:{L:55},type:'Ультразвуковой расходомер (коммерческий узел учёта)',place:'Выход узла в МГ, Ду300',inst:'25.07.2016',cal:'12.12.2025',next:'12.12.2026',acc:'±1,0 %',range:'0–120 т/ч',x:930,y:100,bx:930,by:140,px:930,py:56,flow:true},
+ 'AT-101':{name:'Унос C₃+ в товарный газ',unit:'г/м³',dec:2,lim:{H:0.7,HH:0.8},type:'Виртуальный анализатор ИИ (M3)',place:'Товарный газ после Т-101',inst:'модель v2.3 · 28.10.2026',cal:'подстройка по лаборатории',next:'по каждому анализу лаборатории',acc:'±σ по конформному интервалу',range:'0–3 г/м³',x:1040,y:100,bx:1040,by:140,px:1040,py:56,virtual:true,
+   about:'Лаборатория даёт этот показатель с задержкой, когда газ уже переработан. ИИ оценивает его прямо в процессе по 15 датчикам узла, с погрешностью.'},
+ 'FT-103':{name:'Расход на факел',unit:'т/ч',dec:2,lim:{H:1,HH:3},type:'Ультразвуковой факельный расходомер',place:'Факельная линия Ду200',inst:'30.01.2020',cal:'05.05.2026',next:'05.05.2027',acc:'±10 %',range:'0–30 т/ч',x:1045,y:272,bx:1045,by:312,px:1045,py:230,flow:true},
+ 'VT-102':{name:'Вибрация насоса Н-101',unit:'мм/с',dec:2,lim:{H:4.5,HH:7.1},type:'Пьезоэлектрический вибродатчик',place:'Подшипник Н-101',inst:'12.12.2021',cal:'15.04.2026',next:'15.04.2027',acc:'±5 %',range:'0–20 мм/с СКЗ',x:930,y:440,bx:862,by:440,px:930,py:468,vib:true},
+ 'FT-102':{name:'Расход ШФЛУ',unit:'т/ч',dec:2,lim:{L:4},type:'Кориолисовый расходомер',place:'Нагнетание Н-101',inst:'12.12.2021',cal:'20.03.2026',next:'20.03.2027',acc:'±1,5 %',range:'0–15 т/ч',x:1065,y:440,bx:1065,by:400,px:1065,py:490,flow:true},
+ 'AT-102':{name:'Чистота ШФЛУ',unit:'%',dec:2,lim:{L:97.5,LL:97},type:'Виртуальный анализатор ИИ (M3)',place:'Линия ШФЛУ',inst:'модель v2.3 · 28.10.2026',cal:'подстройка по лаборатории',next:'по каждому анализу лаборатории',acc:'±σ по конформному интервалу',range:'90–100 %',x:1140,y:440,bx:1140,by:400,px:1140,py:475,virtual:true},
+};
+const EQ={
+ 'K-101':{name:'Компрессор сырого газа К-101',kind:'Центробежный компрессор',sens:['VT-101','IT-101','FT-101'],about:'Поднимает давление газа перед охлаждением. Пульсации от изношенного подшипника усиливают брызгоунос в С-101.'},
+ 'T-101':{name:'Теплообменник газ–газ Т-101',kind:'Кожухотрубный рекуператор',sens:['TT-102','FT-101'],about:'Охлаждает входящий газ холодным газом из сепаратора и экономит холод пропановой установки.'},
+ 'X-101':{name:'Пропановый холодильник Х-101',kind:'Испаритель-холодильник',sens:['TT-103','TV-101','TT-104'],about:'Доводит газ до температуры сепарации. Если пропан теплеет, низкую температуру в С-101 не удержать.'},
+ 'C-101':{name:'Низкотемпературный сепаратор С-101',kind:'Вертикальный сепаратор с сетчатым демистером',sens:['TT-104','PT-103','LT-101','PDT-101','AT-101','AT-102'],about:'Здесь газ делится на товарный газ (верх) и ШФЛУ (низ). Демистер ловит капли C₃+.'},
+ 'N-101':{name:'Насос ШФЛУ Н-101',kind:'Центробежный насос',sens:['VT-102','FT-102','LT-101'],about:'Откачивает ШФЛУ на газофракционирование.'},
+ 'FL-1':{name:'Факельная система',kind:'Свеча с дежурной горелкой',sens:['FT-103'],about:'Сброс газа при превышении давления и некондиции. Цель — ноль рутинного факела (Zero Routine Flaring 2030).'},
+};
+
+/* ---------- состояние симулятора ---------- */
+const H=144; // 24 ч истории
+const st={tick:0,sc:'normal',speed:1,sp:-33,wear:0,foul:0,chill:0,drift:0,Tsep:-33,tt103:-43,gas:100,lvl:50,
+  hist:{},vals:{},true:{},flags:{},log:[],sel:{kind:'s',id:'TT-104'},dvr:null,fore:null,opt:null,first:{}};
+const keysH=['vib','foul','tt103','gas','c3'];
+for(const k of Object.keys(S))st.hist[k]=[];
+const hx={vib:[],foul:[],tt103:[],c3:[],gas:[]};
+
+function c3Model(T,vib,foul,gas){return 0.08+0.32*Math.exp((T+34)/8)+1.10*Math.max(0,vib-4.6)/2.4+0.55*foul*foul+0.10*Math.max(0,gas-110)/8}
+function purModel(T,foul){return 99.3-0.9*Math.max(0,T+31.5)-0.45*Math.max(0,-36.5-T)-0.5*foul}
+function c3Sigma(vib,foul){return 0.035+0.03*Math.max(0,vib-6)/2+0.02*foul}
+const PUR_SIG=0.08, C3_PRICE=350000, KWH=28, OFFSPEC=2400000;
+function refrigKW(T){return 700+18*Math.pow(Math.max(0,-26-T),1.4)}
+function costH(T,vib,foul,gas){return gas*c3Model(T,vib,foul,gas)/1000*C3_PRICE+refrigKW(T)*KWH}
+
+function step(){
+  st.tick++;
+  const sc=st.sc;
+  if(sc==='bearing')st.wear=Math.min(0.74,st.wear+0.016*(1-st.wear/0.76));
+  if(sc==='fouling')st.foul=Math.min(0.8,st.foul+0.016*(1-st.foul/0.82));
+  if(sc==='chiller')st.chill=Math.min(1,st.chill+0.016);
+  if(sc==='drift')st.drift=Math.min(0.05,st.drift+0.0009);
+  const t=st.tick;
+  st.gas=100+2.5*Math.sin(t/30)+gauss()*0.6;
+  const vib=2.4+5.0*Math.pow(st.wear,1.6)+gauss()*0.07;
+  st.tt103=-43+15*st.chill+gauss()*0.12;
+  const target=Math.max(st.sp,st.tt103+4.5);
+  st.Tsep+= (target-st.Tsep)*0.35+gauss()*0.08;
+  const T=st.Tsep, foul=st.foul, gas=st.gas;
+  const c3=c3Model(T,vib,foul,gas), pur=purModel(T,foul);
+  const valve=clamp(52+6*(st.tt103+43)+5*(-33-st.sp)+gauss()*1.2,4,100);
+  st.lvl=clamp(st.lvl+(50-st.lvl)*0.3+gauss()*1.4,0,100);
+  const massIn=gas*0.82;
+  const shflu=6.30-gas*c3/1000-0.04*Math.max(0,-36-T)+gauss()*0.03;
+  let flare=0.30+Math.abs(gauss())*0.05+(c3>0.8?2.2*(c3-0.8)+0.6:0);
+  const sales=massIn-shflu-flare;
+  const tr={vib,c3,pur,T,gas,massIn,sales,shflu,flare};
+  st.true=tr;
+  const m=(v,rel)=>v*(1+gauss()*rel);
+  const V=st.vals;
+  V['FT-090']=m(massIn,0.01);
+  V['FT-101']=m(massIn,0.01)*(1+st.drift);
+  V['FT-104']=m(sales,0.01);
+  V['FT-102']=m(shflu,0.015);
+  V['FT-103']=Math.max(0,m(flare,0.10));
+  V['VT-101']=vib;
+  V['IT-101']=124+4*(vib-2.4)+0.9*(gas-100)+gauss()*0.8;
+  V['TT-102']=-8+0.5*(st.tt103+43)+gauss()*0.15;
+  V['TT-103']=st.tt103;
+  V['TV-101']=valve;
+  V['TT-104']=T;
+  V['PDT-101']=3.2+5.5*foul+gauss()*0.06;
+  V['PT-103']=4.66+gauss()*0.012;
+  V['LT-101']=st.lvl;
+  V['VT-102']=1.8+gauss()*0.05;
+  V['AT-101']=c3*(1+gauss()*0.025);
+  V['AT-102']=pur+gauss()*0.04;
+  for(const k in S){const h=st.hist[k];h.push(V[k]);if(h.length>H)h.shift()}
+  const push=(k,v)=>{hx[k].push(v);if(hx[k].length>H)hx[k].shift()};
+  push('vib',vib);push('foul',foul);push('tt103',st.tt103);push('c3',c3);push('gas',gas);
+  st.dvr=reconcile();
+  st.fore=forecast();
+  st.opt=optimize();
+  detect();
+}
+
+/* ---------- ядро баланса (DVR) ---------- */
+const MEAS=[['FT-090',[1,1,1],0.01],['FT-101',[1,1,1],0.01],['FT-104',[1,0,0],0.01],['FT-102',[0,1,0],0.015],['FT-103',[0,0,1],0.10]];
+function inv3(a){const[b,c,d]=a,[e,f,g]=[b[0],b[1],b[2]],[h,i,j]=[c[0],c[1],c[2]],[k,l,n]=[d[0],d[1],d[2]];
+  const A=i*n-j*l,B=-(h*n-j*k),C=h*l-i*k,det=e*A+f*B+g*C;
+  return [[A/det,-(f*n-g*l)/det,(f*j-g*i)/det],[B/det,(e*n-g*k)/det,-(e*j-g*h)/det],[C/det,-(e*l-f*k)/det,(e*i-f*h)/det]]}
+function wls(use){
+  const N=3,w=3;const y=[],Hm=[],sg=[];
+  MEAS.forEach(([tag,row,rel],i)=>{const h=st.hist[tag];const arr=h.slice(-w);const avg=arr.reduce((a,b)=>a+b,0)/arr.length;
+    y.push(avg);Hm.push(row);sg.push(Math.max(0.02,rel*Math.abs(avg))/Math.sqrt(arr.length));});
+  const M=[[0,0,0],[0,0,0],[0,0,0]],b=[0,0,0];
+  for(let i=0;i<5;i++){if(!use[i])continue;const wi=1/(sg[i]*sg[i]);for(let r=0;r<N;r++){b[r]+=Hm[i][r]*wi*y[i];for(let c=0;c<N;c++)M[r][c]+=Hm[i][r]*wi*Hm[i][c]}}
+  const C=inv3(M);const x=C.map(r=>r[0]*b[0]+r[1]*b[1]+r[2]*b[2]);
+  const res=[],z=[];let chi=0;
+  for(let i=0;i<5;i++){const hx_=Hm[i][0]*x[0]+Hm[i][1]*x[1]+Hm[i][2]*x[2];const r=y[i]-hx_;res.push(r);
+    let q=0;for(let a=0;a<3;a++)for(let c=0;c<3;c++)q+=Hm[i][a]*C[a][c]*Hm[i][c];
+    const cr=sg[i]*sg[i]-q;z.push(use[i]&&cr>1e-9?Math.abs(r)/Math.sqrt(cr):0);if(use[i])chi+=r*r/(sg[i]*sg[i])}
+  let vin=0;for(let a=0;a<3;a++)for(let c=0;c<3;c++)vin+=C[a][c];
+  return {x,y,sg,res,z,chi,inlet:x[0]+x[1]+x[2],sIn:Math.sqrt(vin),Hm,C}}
+function reconcile(){
+  if(st.hist['FT-090'].length<3)return null;
+  const all=wls([1,1,1,1,1]);
+  const thr=13.8; // χ², 2 степени свободы, 99,9 %
+  st.flags.chiN=(all.chi>thr)?(st.flags.chiN||0)+1:0;
+  let bad=null,bias=0,clean=all;
+  // подозреваемый = прибор, без которого баланс сходится лучше всего; объявляем, только если он один и тот же 4 такта подряд
+  let mi=-1;
+  if(st.flags.chiN>=3){let best=Infinity;for(let i=0;i<5;i++){const u=[1,1,1,1,1];u[i]=0;const c=wls(u).chi;if(c<best){best=c;mi=i}}}
+  const sus=st.dvrSus||(st.dvrSus={i:-1,n:0});if(mi>=0&&mi===sus.i)sus.n++;else{sus.i=mi;sus.n=mi>=0?1:0}
+  if(mi>=0&&sus.n>=4){
+    const use=[1,1,1,1,1];use[mi]=0;clean=wls(use);
+    const pred=clean.Hm[mi].reduce((a,h,j)=>a+h*clean.x[j],0);bias=(clean.y[mi]/pred-1)*100;bad=MEAS[mi][0]}
+  return {chi:all.chi,ok:!bad,bad,bias,inlet:clean.inlet,sIn:clean.sIn,x:clean.x,z:all.z,imb:all.y[1]-(all.y[2]+all.y[3]+all.y[4])}
+}
+
+/* ---------- прогноз: тренды + физическая модель ---------- */
+function slope(a,n=12){const s=a.slice(-n);const m=s.length;if(m<4)return 0;let sx=0,sy=0,sxy=0,sxx=0;s.forEach((v,i)=>{sx+=i;sy+=v;sxy+=i*v;sxx+=i*i});return (m*sxy-sx*sy)/(m*sxx-sx*sx)}
+function forecast(){
+  const sv=Math.max(0,slope(hx.vib)),sf=Math.max(0,slope(hx.foul)),stt=Math.max(0,slope(hx.tt103));
+  const v0=hx.vib.at(-1),f0=hx.foul.at(-1),t0=hx.tt103.at(-1);
+  const sp=st.sp;let breach=null,c3At=null;
+  for(let k=0;k<=144;k++){const vib=v0+sv*k,foul=Math.min(1,f0+sf*k),tt=t0+stt*k;const T=Math.max(sp,tt+4.5);
+    const c3=c3Model(T,vib,foul,100),pur=purModel(T,foul),sg=c3Sigma(vib,foul);
+    if(c3+1.64*sg>0.8||pur-1.64*PUR_SIG<97){breach=k;c3At=c3;break}}
+  let rul=null; if(sv>0.006){rul=Math.max(0,(7.1-v0)/sv)*TICK_H}
+  let tScada=null; if(sv>0.006&&v0<4.5)tScada=(4.5-v0)/sv*TICK_H;
+  return {breachH:breach==null?null:breach*TICK_H,rulH:rul,tScadaH:tScada,sv,sf,stt,v0,f0,t0}
+}
+const TICK_H=10/60;
+
+/* ---------- оптимизатор ---------- */
+const LOOK=12; // оптимизатор смотрит на 2 ч вперёд
+function optimize(){const f=st.fore||{sv:0,sf:0,stt:0};
+  // если ИИ видит выход за норму в ближайшие 12 ч — уставка считается на момент нарушения + 1 ч
+  const look=(f.breachH!=null&&f.breachH<=12)?Math.min(78,f.breachH/TICK_H+6):LOOK;
+  const o=optimizeAt(hx.vib.at(-1)+f.sv*look,Math.min(1,hx.foul.at(-1)+f.sf*look),hx.tt103.at(-1)+f.stt*look);o.lookH=look*TICK_H;return o}
+function optimizeAt(vib,foul,tt){const gas=100;
+  const sg=c3Sigma(vib,foul);const Tmin=Math.max(-38,tt+4.5);
+  let best=null;const curve=[];
+  for(let T=-38;T<=-26.0001;T+=0.25){const c3=c3Model(T,vib,foul,gas),pur=purModel(T,foul);
+    const feas=T>=Tmin-1e-9&&c3+1.64*sg<=0.8&&pur-1.64*PUR_SIG>=97;const cost=costH(T,vib,foul,gas);
+    curve.push({T,c3,feas,reach:T>=Tmin-1e-9});if(feas&&(!best||cost<best.cost))best={T,cost,c3,pur}}
+  const cur={T:st.sp,cost:costH(Math.max(st.sp,Tmin),vib,foul,gas),c3:c3Model(Math.max(st.sp,Tmin),vib,foul,gas)};
+  const curOff=cur.c3>0.8;
+  let eff=null;if(best){eff=(cur.cost+(curOff?OFFSPEC:0))-best.cost}
+  return {best,cur,curve,sg,Tmin,eff,vib,foul}
+}
+
+/* ---------- статусы ---------- */
+function stateOf(tag,v){const L=S[tag].lim||{};
+  if((L.HH!=null&&v>=L.HH)||(L.LL!=null&&v<=L.LL))return 'crit';
+  if((L.H!=null&&v>=L.H)||(L.L!=null&&v<=L.L))return 'warn';
+  if(tag===st.flags.aiTag)return 'ai';
+  if(st.dvr&&st.dvr.bad===tag)return 'warn';
+  return 'ok'}
+
+/* ---------- события, ИИ сам пишет ---------- */
+function ptime(tk=st.tick){const min=6*60+tk*10;const d=Math.floor(min/1440)+1;const m=min%1440;return `С${d} ${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}
+function logE(src,text,cls){st.log.unshift({t:ptime(),src,text,cls});if(st.log.length>60)st.log.pop();renderLog()}
+function once(key,fn){if(st.flags[key])return;st.flags[key]=true;fn()}
+let inDetect=false;
+function detect(){inDetect=true;try{detectInner()}finally{inDetect=false}}
+function detectInner(){
+  const V=st.vals,f=st.fore,sc=st.sc;
+  // ИИ: ранний тренд вибрации
+  if(f.sv>0.012&&f.v0>2.8&&f.v0<4.5) once('ai-vib',()=>{st.flags.aiTag='VT-101';
+    const txt=`Вибрация К-101 растёт: ${fmt(f.v0,2)} мм/с, +${fmt(f.sv/TICK_H,2)} мм/с в час. Штатная сигнализация сработает на 4,5 мм/с примерно через ${fmt(f.tScadaH,0)} ч. Остаточный ресурс подшипника ≈ ${fmt(f.rulH,0)} ч.`;
+    logE('ИИ',txt,'ai');ai(`<p><b>Ранний признак износа подшипника К-101.</b> ${txt}</p>`+(f.breachH!=null?`<p>По физической модели унос C₃+ выйдет за норму 0,8 г/м³ примерно через <b>${fmt(f.breachH,0)} ч</b>: пульсации усиливают брызгоунос в С-101.</p>`:'')+(()=>{if(f.breachH==null)return `<p>Предлагаю запланировать ремонт К-101 в ближайшее окно.</p>`;const k=f.breachH/TICK_H+3;const o2=optimizeAt(f.v0+f.sv*k,Math.min(1,f.f0+f.sf*k),f.t0+f.stt*k);
+      return o2.best?`<p>Предлагаю запланировать ремонт К-101 в ближайшее окно. До ремонта, чтобы унос не вышел за норму, уставку TT-104 нужно будет понизить примерно до ${fmt(o2.best.T,1)} °C.</p>`:`<p>Предлагаю запланировать ремонт К-101 в ближайшее окно: режимом унос не удержать.</p>`})(),'warn','VT-101 · тренд 2 ч · модель M2 + M3');});
+  if(V['VT-101']>=4.5) once('sc-vib',()=>logE('SCADA','VT-101 Н: вибрация К-101 выше 4,5 мм/с','scada'));
+  if(V['VT-101']>=7.1) once('sc-vib2',()=>{logE('SCADA','VT-101 НН: недопустимая вибрация К-101','crit');ai(`<p><b>Вибрация К-101 ${fmt(V['VT-101'],2)} мм/с — зона недопустимой вибрации по ISO 10816-3.</b> Нужен останов и переход на резерв по регламенту цеха.</p>`,'alert','VT-101')});
+  // прогноз выхода за норму
+  if(f.breachH!=null&&f.breachH<=8&&V['AT-101']<0.8) once('ai-c3',()=>{st.flags.aiTag=st.flags.aiTag||'AT-101';
+    const k=f.breachH/TICK_H+3;const o=optimizeAt(f.v0+f.sv*k,Math.min(1,f.f0+f.sf*k),f.t0+f.stt*k);const t=`Через ≈ ${fmt(f.breachH,0)} ч качество товарного газа или ШФЛУ выйдет за норму.`;
+    logE('ИИ',t+(o.best?` Для удержания нормы понадобится TT-104 ≈ ${fmt(o.best.T,1)} °C.`:''),'ai');
+    ai(`<p><b>${t}</b> Унос C₃+ сейчас ${fmt(V['AT-101'],2)} ± ${fmt(o.sg,2)} г/м³.</p>`+(o.best?`<p>Режимом это можно удержать до ремонта: к тому моменту понадобится уставка около <b>${fmt(o.best.T,1)} °C</b> вместо ${fmt(st.sp,1)} °C — унос ${fmt(o.best.c3,2)} г/м³, ровно в норме с запасом 1,64σ, без лишнего холода. Оптимизатор пересчитывает уставку каждые 10 минут.</p>`:`<p>Режимом не удержать: холодильник не даёт нужной температуры. Нужны снижение нагрузки и резервный холод.</p>`),'warn','AT-101 · прогноз M3 · оптимизатор M4')});
+  if(V['AT-101']>=0.8) once('c3-crit',()=>{logE('ИИ','AT-101: унос C₃+ выше нормы 0,8 г/м³, газ уходит в некондицию','crit');
+    ai(`<p><b>Унос C₃+ ${fmt(V['AT-101'],2)} г/м³ — выше нормы.</b> Потери ≈ ${fmtI(lossH())} ₸/ч с учётом некондиции. Расход на факел вырос до ${fmt(V['FT-103'],2)} т/ч.</p>`,'alert','AT-101 · FT-103')});
+  // демистер
+  if(slope(st.hist['PDT-101'])>0.03&&V['PDT-101']>3.9) once('ai-foul',()=>{st.flags.aiTag='PDT-101';
+    const t=`Перепад на демистере С-101 растёт: ${fmt(V['PDT-101'],1)} кПа. Сетка забивается, растёт брызгоунос C₃+.`;
+    logE('ИИ',t,'ai');ai(`<p><b>${t}</b></p><p>Штатная уставка 6 кПа${f.sf>0?` будет достигнута примерно через ${fmt((6-V['PDT-101'])/(slope(st.hist['PDT-101'])/TICK_H),0)} ч`:''}. ${f.breachH!=null?`Унос выйдет за норму через ≈ ${fmt(f.breachH,0)} ч.`:'Пока качество в норме.'} Рекомендую промывку демистера в ближайшее плановое окно.</p>`,'warn','PDT-101 · модель M3')});
+  if(V['PDT-101']>=6) once('sc-pdt',()=>logE('SCADA','PDT-101 Н: перепад на демистере выше 6 кПа','scada'));
+  // холодильник
+  if(slope(hx.tt103)>0.05&&V['TT-103']>-41.5) once('ai-chill',()=>{st.flags.aiTag='TT-103';
+    const t=`Пропан в Х-101 теплеет: ${fmt(V['TT-103'],1)} °C, клапан TV-101 открыт на ${fmt(V['TV-101'],0)} %.`;
+    logE('ИИ',t,'ai');ai(`<p><b>${t}</b> Скоро контур не удержит −33 °C в сепараторе.</p><p>Проверьте холодильную установку: компрессор пропана и конденсатор. ${f.breachH!=null?`Качество выйдет за норму через ≈ ${fmt(f.breachH,0)} ч.`:''}</p>`,'warn','TT-103 · TV-101 · модель M3')});
+  if(V['TT-103']>=-39) once('sc-tt103',()=>logE('SCADA','TT-103 Н: температура пропана выше −39 °C','scada'));
+  if(V['TV-101']>=98) once('sc-tv',()=>logE('SCADA','TV-101 НН: клапан полностью открыт, регулятор без запаса','scada'));
+  // баланс
+  const d=st.dvr;if(d&&d.bad) once('dvr-'+d.bad,()=>{st.flags.aiTag=d.bad;
+    const t=`Баланс узла не сходится. Неисправный прибор: ${d.bad}, смещение ${d.bias>0?'+':''}${fmt(d.bias,1)} %.`;
+    logE('Баланс',t,'bal');ai(`<p><b>${t}</b></p><p>Три независимых источника (FT-090, сумма выходов FT-104 + FT-102 + FT-103 и сам ${d.bad}) сравниваются по весам точности. Согласованный расход на входе: <b>${fmt(d.inlet,1)} ± ${fmt(d.sIn,1)} т/ч</b>. Рекомендую использовать согласованное значение и вызвать КИПиА на поверку ${d.bad}.</p>`,'warn','ядро баланса M1 · χ²-тест')});
+}
+function lossH(){const V=st.vals;return st.gas*Math.max(0,V['AT-101'])/1000*C3_PRICE+(V['AT-101']>0.8?OFFSPEC:0)}
+
+/* ---------- отрисовка схемы ---------- */
+const NS='http://www.w3.org/2000/svg';
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function buildInsts(){const g=$('#insts');
+  for(const [tag,s] of Object.entries(S)){
+    const [a,b]=tag.split('-');
+    const grp=el('g',{class:'inst'+(s.virtual?' virtual':''),'data-tag':tag,tabindex:'0',role:'button','aria-label':`${tag}, ${s.name}`},g);
+    // stem
+    const dx=s.px-s.x,dy=s.py-s.y,len=Math.hypot(dx,dy)||1;
+    el('line',{class:'stem',x1:s.x+dx/len*19,y1:s.y+dy/len*19,x2:s.px,y2:s.py},grp);
+    el('circle',{class:'halo',cx:s.x,cy:s.y,r:24},grp);
+    el('circle',{class:'b',cx:s.x,cy:s.y,r:19},grp);
+    el('line',{x1:s.x-17,y1:s.y,x2:s.x+17,y2:s.y,stroke:s.virtual?'var(--ai)':'var(--equip)','stroke-width':'1'},grp);
+    const t1=el('text',{class:'tg',x:s.x,y:s.y-4},grp);t1.textContent=s.virtual?'ИИ':a;
+    const t2=el('text',{class:'tg',x:s.x,y:s.y+12},grp);t2.textContent=b;
+    el('rect',{class:'vb',x:s.bx-37,y:s.by-11,width:74,height:22,rx:3},grp);
+    const vt=el('text',{class:'vt',x:s.bx,y:s.by+4},grp);vt.id='v-'+tag;
+    const al=el('g',{class:'alm'},grp);el('path',{d:`M${s.x+16} ${s.y-30}l8 13h-16z`},al);
+    grp.addEventListener('click',()=>select('s',tag));
+    grp.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select('s',tag)}});
+  }
+  document.querySelectorAll('.hit[data-eq]').forEach(n=>{const id=n.dataset.eq;if(!EQ[id])return;
+    n.addEventListener('click',()=>select('e',id));n.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select('e',id)}})});
+}
+function renderScheme(){
+  for(const tag in S){const v=st.vals[tag];if(v==null)continue;const s=S[tag];
+    $('#v-'+tag).textContent=`${fmt(v,s.dec)} ${s.unit}`;
+    const g=document.querySelector(`.inst[data-tag="${tag}"]`);g.dataset.st=stateOf(tag,v);
+    g.classList.toggle('sel',st.sel.kind==='s'&&st.sel.id===tag)}
+  document.querySelectorAll('.hit[data-eq]').forEach(n=>n.classList.toggle('sel',st.sel.kind==='e'&&st.sel.id===n.dataset.eq));
+  const lv=st.vals['LT-101']||50;const h=109*(0.35+lv/100*0.6);const liq=$('#liq');liq.setAttribute('y',439-h);liq.setAttribute('height',h);
+  const fl=st.vals['FT-103']||0.3;$('#flame').style.transform=`scale(${clamp(0.8+fl*0.4,0.8,2.2)})`;
+}
+
+/* ---------- KPI ---------- */
+function setK(id,v,s,stt){const k=$(id);k.querySelector('.v').innerHTML=v;k.querySelector('.s').textContent=s;k.dataset.st=stt||''}
+function renderKPI(){const V=st.vals,o=st.opt,f=st.fore,d=st.dvr;
+  setK('#k-c3',`${fmt(V['AT-101'],2)}<small>± ${fmt(o.sg,2)} г/м³</small>`,'норма ≤ 0,80',V['AT-101']>=0.8?'crit':V['AT-101']>=0.7?'warn':'');
+  setK('#k-pur',`${fmt(V['AT-102'],2)}<small>%</small>`,'норма ≥ 97,0',V['AT-102']<=97?'crit':V['AT-102']<=97.5?'warn':'');
+  if(V['AT-101']>=0.8||V['AT-102']<=97)setK('#k-fore','<span>норма нарушена</span>','партия уходит в некондицию','crit');
+  else if(f.breachH!=null)setK('#k-fore',`${fmt(f.breachH,0)}<small>ч</small>`,'прогноз ИИ по трендам и модели','ai');
+  else setK('#k-fore','> 24<small>ч</small>','рисков не видно','');
+  if(d){if(d.bad)setK('#k-bal',`${d.bad}`,`прибор врёт на ${d.bias>0?'+':''}${fmt(d.bias,1)} %`,'warn');
+    else setK('#k-bal',`сходится`,`вход ${fmt(d.inlet,1)} ± ${fmt(d.sIn,1)} т/ч · χ² ${fmt(d.chi,1)}`,'')}
+  if(f.rulH!=null)setK('#k-rul',`${fmt(f.rulH,0)}<small>ч</small>`,'до вибрации 7,1 мм/с',f.rulH<24?'crit':'warn');
+  else setK('#k-rul','> 500<small>ч</small>','тренда износа нет','');
+  const L=lossH();setK('#k-loss',`${fmtI(L)}<small>₸/ч</small>`,'C₃+ в товарном газе'+(V['AT-101']>0.8?' + некондиция':''),V['AT-101']>0.8?'crit':'');
+  $('#clock').textContent=`Сутки ${Math.floor((6*60+st.tick*10)/1440)+1} · ${ptime().split(' ')[1]}`;
+}
+
+/* ---------- карточка объекта ---------- */
+function sparkSVG(tag){const s=S[tag],h=st.hist[tag];const W=340,Hh=118,pl=30,pr=8,pt=8,pb=18;
+  const L=s.lim||{};const vals=h.slice();const lims=[L.LL,L.L,L.H,L.HH].filter(x=>x!=null);
+  let lo=Math.min(...vals,...lims),hi=Math.max(...vals,...lims);const pad=(hi-lo)*0.12||1;lo-=pad;hi+=pad;
+  const X=i=>pl+i*(W-pl-pr)/(H-1),Y=v=>pt+(hi-v)*(Hh-pt-pb)/(hi-lo);
+  const off=H-vals.length;
+  let p='';vals.forEach((v,i)=>{p+=(i?'L':'M')+X(i+off).toFixed(1)+' '+Y(v).toFixed(1)});
+  const lo2=L.L!=null?L.L:(L.LL!=null?L.LL:lo),hi2=L.H!=null?L.H:(L.HH!=null?L.HH:hi);
+  let o=`<svg class="trend" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Тренд ${tag} за 24 часа">`;
+  o+=`<rect x="${pl}" y="${Y(Math.min(hi,hi2))}" width="${W-pl-pr}" height="${Math.max(0,Y(Math.max(lo,lo2))-Y(Math.min(hi,hi2)))}" fill="var(--ok)" opacity=".07"/>`;
+  const lineL=(v,c,lab)=>{if(v==null||v<lo||v>hi)return '';return `<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="4 3" stroke-width="1"/><text x="${W-pr-2}" y="${Y(v)-3}" text-anchor="end" font-size="9.5" fill="${c}" font-family="var(--f-num)">${lab} ${fmt(v,s.dec)}</text>`};
+  o+=lineL(L.H,'var(--warn)','H')+lineL(L.HH,'var(--crit)','HH')+lineL(L.L,'var(--warn)','L')+lineL(L.LL,'var(--crit)','LL');
+  if(s.sp)o+=lineL(st.sp,'var(--ai)','SP');
+  if(tag==='AT-101'){const sg=st.opt.sg;let up='',dn='';vals.forEach((v,i)=>{up+=(i?'L':'M')+X(i+off).toFixed(1)+' '+Y(v+sg).toFixed(1)});for(let i=vals.length-1;i>=0;i--)dn+='L'+X(i+off).toFixed(1)+' '+Y(vals[i]-sg).toFixed(1);o+=`<path d="${up}${dn}Z" fill="var(--ai)" opacity=".13"/>`}
+  o+=`<path d="${p}" fill="none" stroke="${s.virtual?'var(--ai)':'var(--fg)'}" stroke-width="1.5"/>`;
+  const lv=vals.at(-1);o+=`<circle cx="${X(H-1)}" cy="${Y(lv)}" r="3.2" fill="${s.virtual?'var(--ai)':'var(--fg)'}"/>`;
+  o+=`<text x="${pl-4}" y="${pt+8}" text-anchor="end" font-size="9.5" fill="var(--muted)" font-family="var(--f-num)">${fmt(hi,s.dec)}</text><text x="${pl-4}" y="${Hh-pb}" text-anchor="end" font-size="9.5" fill="var(--muted)" font-family="var(--f-num)">${fmt(lo,s.dec)}</text>`;
+  o+=`<text x="${pl}" y="${Hh-4}" font-size="9.5" fill="var(--muted)">−24 ч</text><text x="${W-pr}" y="${Hh-4}" text-anchor="end" font-size="9.5" fill="var(--muted)">сейчас</text></svg>`;
+  return o}
+function spectrumSVG(tag){const wear=tag==='VT-101'?st.wear:0;const W=340,Hh=92,pl=8,pr=8,pb=18,pt=8;
+  const peaks=[[49.5,1.1,'1×'],[99,0.45,'2×'],[161,0.08+2.4*wear,'BPFO'],[322,0.04+1.1*wear,'2×BPFO'],[148.5,0.12,'3×']];
+  const amax=Math.max(2.6,...peaks.map(p=>p[1]));const X=f=>pl+f/500*(W-pl-pr),Y=a=>Hh-pb-a/amax*(Hh-pb-pt);
+  let o=`<svg class="trend" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Спектр вибрации">`;
+  let ss=(st.tick*7919+13)%2147483647||1;const r2=()=>{ss=(ss*16807)%2147483647;return (ss-1)/2147483646};
+  for(let f=6;f<500;f+=6){const a=0.03+r2()*0.05;o+=`<line x1="${X(f)}" x2="${X(f)}" y1="${Y(0)}" y2="${Y(a)}" stroke="var(--muted)" stroke-width="1.4" opacity=".5"/>`}
+  peaks.forEach(([f,a,l])=>{const hot=l.includes('BPFO')&&wear>0.15;o+=`<line x1="${X(f)}" x2="${X(f)}" y1="${Y(0)}" y2="${Y(a)}" stroke="${hot?'var(--ai)':'var(--fg)'}" stroke-width="3"/>`;if(a>0.3||hot)o+=`<text x="${X(f)}" y="${Y(a)-3}" text-anchor="middle" font-size="9.5" fill="${hot?'var(--ai)':'var(--muted)'}" font-family="var(--f-num)">${l}</text>`});
+  o+=`<text x="${pl}" y="${Hh-4}" font-size="9.5" fill="var(--muted)">0 Гц</text><text x="${W-pr}" y="${Hh-4}" text-anchor="end" font-size="9.5" fill="var(--muted)">500 Гц</text></svg>`;return o}
+function insightFor(tag){const V=st.vals,f=st.fore,d=st.dvr,o=st.opt;
+  switch(tag){
+   case 'VT-101':return f.rulH!=null?`Тренд +${fmt(f.sv/TICK_H,2)} мм/с в час. Ресурс подшипника ≈ ${fmt(f.rulH,0)} ч. Пик BPFO в спектре — признак дефекта наружного кольца.`:'Вибрация стабильна, характерных частот дефекта подшипника в спектре нет.';
+   case 'AT-101':return `Оценка ${fmt(V['AT-101'],2)} ± ${fmt(o.sg,2)} г/м³ (90 % интервал). Вклад: ${contrib().map(c=>`${c.n} ${c.p} %`).join(', ')}.`;
+   case 'AT-102':return `Чистота ${fmt(V['AT-102'],2)} ± ${fmt(PUR_SIG,2)} %. Холоднее −36,5 °C в ШФЛУ начинает растворяться метан, теплее −31,5 °C — уходят лёгкие.`;
+   case 'TT-104':return o.best?`Оптимум сейчас ${fmt(o.best.T,1)} °C при уставке ${fmt(st.sp,1)} °C. ${Math.abs(o.best.T-st.sp)<0.3?'Режим уже близок к оптимальному.':'Разница — в панели оптимизатора.'}`:'Допустимого режима нет: холода не хватает для нормы по уносу.';
+   case 'PDT-101':return slope(st.hist['PDT-101'])>0.02?`Перепад растёт на ${fmt(slope(st.hist['PDT-101'])/TICK_H,2)} кПа/ч — демистер забивается.`:'Перепад стабилен, демистер чистый.';
+   case 'TT-103':case 'TV-101':return `Запас регулятора: клапан открыт на ${fmt(V['TV-101'],0)} %, пропан ${fmt(V['TT-103'],1)} °C. ${V['TV-101']>85?'Запаса почти нет.':'Запас есть.'}`;
+   default:if(S[tag].flow&&d){const i=MEAS.findIndex(m=>m[0]===tag);const z=i>=0?d.z[i]:0;return d.bad===tag?`Ядро баланса указывает на этот прибор: смещение ${d.bias>0?'+':''}${fmt(d.bias,1)} %. Согласованное значение входа ${fmt(d.inlet,1)} ± ${fmt(d.sIn,1)} т/ч.`:`Согласуется с балансом узла: отклонение ${fmt(z,1)}σ (порог тревоги ≈ 3σ).`}
+     return 'Показания в норме, корреляций с отклонениями качества нет.'}}
+function renderCard(){const c=$('#card');const sel=st.sel;
+  if(sel.kind==='s'){const tag=sel.id,s=S[tag],v=st.vals[tag],stt=stateOf(tag,v);const h=st.hist[tag];const dv=h.length>6?v-h.at(-7):0;
+    const L=s.lim||{};const limTxt=['LL','L','H','HH'].filter(k=>L[k]!=null).map(k=>`${k} ${fmt(L[k],s.dec)}`).join(' · ')||'—';
+    const stTxt={ok:'норма',warn:'отклонение',crit:'авария',ai:'внимание ИИ'}[stt];
+    c.innerHTML=`<div class="panel-h"><h2>${s.virtual?'Виртуальный анализатор':'Датчик'}</h2><span class="pill" data-st="${stt}">${stTxt}</span></div>
+    <div class="card-b"><div class="ctag"><span class="t">${tag}</span>${s.virtual?'<span class="pill v">ИИ · M3</span>':''}</div>
+    <div class="cname">${s.name}</div>
+    <div class="big"><span class="v">${fmt(v,s.dec)}</span><span class="u">${s.unit}</span><span class="d">${dv>=0?'▲':'▼'} ${fmt(Math.abs(dv),s.dec)} за 1 ч</span></div>
+    ${sparkSVG(tag)}
+    ${s.vib?`<div class="lbl" style="margin:10px 0 4px">Спектр вибрации, мм/с</div>${spectrumSVG(tag)}`:''}
+    <dl class="meta"><dt>Прибор</dt><dd>${s.type}</dd><dt>Место</dt><dd>${s.place}</dd><dt>Установлен</dt><dd>${s.inst}</dd><dt>Поверка</dt><dd>${s.cal} → ${s.next}</dd><dt>Диапазон</dt><dd>${s.range}</dd><dt>Уставки</dt><dd>${limTxt}${s.sp?` · SP ${fmt(st.sp,1)}`:''}</dd><dt>Точность</dt><dd>${s.acc}</dd></dl>
+    ${s.about?`<div class="diag">${s.about}</div>`:''}
+    <div class="insight"><div class="lbl">Что видит ИИ</div>${insightFor(tag)}</div>
+    <div style="margin-top:10px"><button class="btn ai" id="ask-sel">Спросить ИИ про ${tag}</button></div></div>`;
+    $('#ask-sel').onclick=()=>ask(`Что с датчиком ${tag}?`);
+  } else {const e=EQ[sel.id];const f=st.fore;
+    const rulV=sel.id==='K-101'?(f.rulH!=null?fmt(f.rulH,0):'> 500'):null;
+    const ru={'K-101':'К-101','T-101':'Т-101','X-101':'Х-101','C-101':'С-101','N-101':'Н-101','FL-1':'Факел'}[sel.id];
+    c.innerHTML=`<div class="panel-h"><h2>Аппарат</h2><span class="pill">${e.kind}</span></div><div class="card-b">
+    <div class="ctag"><span class="t">${ru}</span></div><div class="cname">${e.name}</div>
+    ${rulV?`<div class="big"><span class="v">${rulV}</span><span class="u">ч</span><span class="d">остаточный ресурс подшипника</span></div>`:''}
+    <div class="diag">${e.about}</div>
+    <div class="lbl" style="margin-top:10px">Датчики аппарата</div>
+    <div class="links">${e.sens.map(t=>`<button data-go="${t}">${t} · ${fmt(st.vals[t],S[t].dec)} ${S[t].unit}</button>`).join('')}</div>
+    <div style="margin-top:10px"><button class="btn ai" id="ask-sel">Спросить ИИ про аппарат</button></div></div>`;
+    c.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>select('s',b.dataset.go));
+    $('#ask-sel').onclick=()=>ask(`Состояние аппарата ${sel.id}`);
+  }
+  $('#ctx').innerHTML=`Контекст вопроса: <b>${sel.kind==='s'?sel.id:EQ[sel.id].name}</b>`;
+}
+function select(kind,id){st.sel={kind,id};renderCard();renderScheme()}
+
+/* ---------- оптимизатор: график ---------- */
+function renderOpt(){const o=st.opt,svg=$('#optc');const W=520,Hh=210,pl=40,pr=12,pt=12,pb=30;
+  const X=T=>pl+(T+38)/12*(W-pl-pr),ymax=1.4,Y=v=>pt+(ymax-Math.min(ymax,v))/ymax*(Hh-pt-pb);
+  let s='';for(let v=0;v<=1.4001;v+=0.2){s+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--rule)" stroke-width="1"/><text x="${pl-6}" y="${Y(v)+3}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--f-num)">${fmt(v,1)}</text>`}
+  for(let T=-38;T<=-26;T+=2)s+=`<text x="${X(T)}" y="${Hh-12}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--f-num)">${fmt(T,0)}</text>`;
+  s+=`<text x="${W-pr}" y="${Hh-1}" text-anchor="end" font-size="10" fill="var(--muted)">температура сепарации TT-104, °C</text><text x="${pl}" y="${pt-2}" font-size="10" fill="var(--muted)">унос C₃+, г/м³</text>`;
+  if(o.Tmin>-38)s+=`<rect x="${X(-38)}" y="${pt}" width="${X(o.Tmin)-X(-38)}" height="${Hh-pt-pb}" fill="var(--muted)" opacity=".12"/><text x="${X(-38)+4}" y="${pt+12}" font-size="10" fill="var(--muted)">холода не хватает</text>`;
+  let up='',dn='',ln='';o.curve.forEach((p,i)=>{up+=(i?'L':'M')+X(p.T).toFixed(1)+' '+Y(p.c3+1.64*o.sg).toFixed(1);ln+=(i?'L':'M')+X(p.T).toFixed(1)+' '+Y(p.c3).toFixed(1)});
+  for(let i=o.curve.length-1;i>=0;i--)dn+='L'+X(o.curve[i].T).toFixed(1)+' '+Y(Math.max(0,o.curve[i].c3-1.64*o.sg)).toFixed(1);
+  s+=`<path d="${up}${dn}Z" fill="var(--ai)" opacity=".14"/><path d="${ln}" fill="none" stroke="var(--ai)" stroke-width="2"/>`;
+  s+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0.8)}" y2="${Y(0.8)}" stroke="var(--crit)" stroke-dasharray="5 4"/><text x="${pl+4}" y="${Y(0.8)-4}" font-size="10" fill="var(--crit)">норма 0,8</text>`;
+  const curT=Math.max(st.sp,o.Tmin),cc=c3Model(curT,o.vib,o.foul,100);
+  s+=`<circle cx="${X(curT)}" cy="${Y(cc)}" r="5" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/><text x="${X(curT)}" y="${Y(cc)-10}" text-anchor="middle" font-size="10" fill="var(--fg)" font-family="var(--f-num)">текущая SP</text>`;
+  if(o.best){s+=`<circle cx="${X(o.best.T)}" cy="${Y(o.best.c3)}" r="5.5" fill="var(--ai)"/><text x="${X(o.best.T)}" y="${Y(o.best.c3)+18}" text-anchor="middle" font-size="10" fill="var(--ai)" font-family="var(--f-num)" font-weight="600">ИИ ${fmt(o.best.T,1)}</text>`}
+  svg.innerHTML=s;
+  $('#o-cur').textContent=`${fmt(st.sp,1)} °C`;
+  $('#o-rec').textContent=o.best?`${fmt(o.best.T,1)} °C`:'нет режима';
+  const near=o.best&&Math.abs(o.best.T-st.sp)<0.3;
+  $('#o-effk').textContent=o.cur.c3>0.8?`Предотвращает потери`:'Экономия';
+  $('#o-eff').textContent=o.best?(near?'режим оптимален':`${o.eff>=0?'':'−'}${fmtI(Math.abs(o.eff))} ₸/ч`):'—';
+  $('#o-note').innerHTML=!o.best?'Ни одна температура не держит норму: холода не хватает или износ слишком велик. ИИ советует снизить нагрузку и устранить причину.':
+    near?`Сейчас режим оптимален: холоднее — переплата за холод, теплее — растёт унос. Полоса вокруг линии — неопределённость модели ±1,64σ.`:
+    `ИИ ищет самую тёплую (дешёвую по холоду) температуру, при которой унос с запасом 1,64σ остаётся в норме и чистота ШФЛУ ≥ 97 % — с учётом трендов на ${fmt(o.lookH,0)} ч вперёд. Это и есть «ровно столько, сколько нужно».`;
+  $('#o-apply').disabled=!o.best||near;
+}
+$('#o-apply').onclick=()=>{const o=st.opt;if(!o.best)return;const old=st.sp;st.sp=Math.round(o.best.T*2)/2;logE('Оператор',`Уставка TT-104 изменена: ${fmt(old,1)} → ${fmt(st.sp,1)} °C по рекомендации ИИ`,'bal');
+  ai(`<p>Уставка принята: <b>${fmt(st.sp,1)} °C</b>. Буду следить, что унос C₃+ вернулся в норму и баланс сходится.</p>`,'','оператор · M4');renderAll()};
+
+/* ---------- журнал ---------- */
+function renderLog(){const L=$('#log');if(!st.log.length){L.innerHTML='<div class="empty">Событий нет. Выберите сценарий сверху, чтобы увидеть, как ИИ замечает проблему раньше штатной сигнализации.</div>';return}
+  L.innerHTML='<table><tbody>'+st.log.map(e=>`<tr><td>${e.t}</td><td><span class="src-tag ${e.cls==='crit'?'crit':e.cls==='scada'?'scada':e.cls==='ai'?'ai':'bal'}">${e.src}</span></td><td>${e.text}</td></tr>`).join('')+'</tbody></table>'}
+
+/* ---------- ИИ-технолог ---------- */
+const msgs=$('#msgs');
+function addMsg(html,cls,src,who){const d=document.createElement('div');d.className='m '+cls;d.innerHTML=(cls.includes('a')?`<span class="who">${who||'ИИ-технолог'} · ${ptime()}</span>`:'')+html+(src?`<span class="src">источник: ${src} · числа только из данных узла</span>`:'');
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;d.querySelectorAll('.tl').forEach(t=>t.onclick=()=>select('s',t.dataset.t));return d}
+const whoOf=kind=>kind==='alert'?'ИИ · тревога':kind==='warn'?'ИИ · предупреждение':'ИИ-технолог';
+function ai(html,kind,src){
+  if(inDetect&&LLM.online){aiLLM({kind:'alert',event:plain(html),facts:factsFor(null,html),fallbackHTML:html,msgKind:kind,src});return}
+  addMsg(html,'a '+(kind||''),src,whoOf(kind))}
+const tl=t=>`<span class="tl" data-t="${t}">${t}</span>`;
+
+/* ---------- связь с локальной моделью (server.py → Ollama → Qwen2.5) ---------- */
+const LLM={online:false,model:null,queue:Promise.resolve()};
+const SC_NAMES={normal:'штатный режим',bearing:'износ подшипника К-101',fouling:'забивка демистера С-101',chiller:'отказ холодильника Х-101',drift:'дрейф расходомера FT-101'};
+const ST_RU={ok:'норма',warn:'отклонение',crit:'авария',ai:'на контроле ИИ'};
+function plain(html){const d=document.createElement('div');d.innerHTML=html;d.querySelectorAll('p').forEach(p=>p.append(' '));return d.textContent.replace(/\s+/g,' ').trim()}
+const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const TAG_RE=new RegExp('\\b('+Object.keys(S).map(t=>t.replace('-','\\-')).join('|')+')\\b','g');
+function llmHTML(text){return text.split(/\n+/).map(x=>x.trim()).filter(Boolean).map(p=>`<p>${esc(p).replace(TAG_RE,m=>tl(m))}</p>`).join('')}
+function snapshot(){const V=st.vals,o=st.opt,f=st.fore,d=st.dvr;const L=[];
+  L.push(`Время процесса: ${ptime()}. Установка НТС-1: компрессор К-101 → теплообменник Т-101 → пропановый холодильник Х-101 → клапан TV-101 → сепаратор С-101 (верх — товарный газ, низ — ШФЛУ через насос Н-101), сброс на факел через PV-101.`);
+  L.push(`Уставка температуры сепарации TT-104: ${fmt(st.sp,1)} °C. Нормы качества: унос C3+ не выше 0,8 г/м³, чистота ШФЛУ не ниже 97 %.`);
+  L.push('Датчики (тег — название: значение; уставки; состояние):');
+  for(const tag in S){const s=S[tag],v=V[tag],lm=s.lim||{};const lims=['LL','L','H','HH'].filter(k=>lm[k]!=null).map(k=>`${k} ${fmt(lm[k],s.dec)}`).join(', ');
+    const sg=tag==='AT-101'?` ± ${fmt(o.sg,2)}`:tag==='AT-102'?` ± ${fmt(PUR_SIG,2)}`:'';
+    L.push(`- ${tag} — ${s.name}${s.virtual?' (виртуальный анализатор ИИ)':''}: ${fmt(v,s.dec)}${sg} ${s.unit}; ${lims||'без уставок'}; ${ST_RU[stateOf(tag,v)]}`)}
+  L.push('Прогноз ИИ (тренды датчиков + физическая модель):');
+  L.push(`- рост вибрации К-101: ${fmt(Math.max(0,f.sv/TICK_H),2)} мм/с в час`);
+  L.push(f.breachH!=null?`- выход качества за норму ожидается примерно через ${fmt(f.breachH,0)} ч`:'- выхода качества за норму в ближайшие 24 ч не ожидается');
+  if(f.tScadaH!=null)L.push(`- штатная сигнализация по вибрации 4,5 мм/с сработает примерно через ${fmt(f.tScadaH,0)} ч`);
+  L.push(f.rulH!=null?`- остаточный ресурс подшипника К-101 примерно ${fmt(f.rulH,0)} ч до вибрации 7,1 мм/с`:'- тренда износа подшипника К-101 нет');
+  const pdt=slope(st.hist['PDT-101'])/TICK_H;if(pdt>0.05)L.push(`- перепад на демистере растёт на ${fmt(pdt,2)} кПа в час`);
+  L.push('Вклад факторов в унос C3+: '+contrib().map(c=>`${c.n} ${c.p} %`).join(', ')+'.');
+  if(o.best){const near=Math.abs(o.best.T-st.sp)<0.3;
+    L.push(`Оптимизатор режима M4 (с учётом трендов на ${fmt(o.lookH,0)} ч): рекомендуемая уставка TT-104 ${fmt(o.best.T,1)} °C, ожидаемый унос C3+ ${fmt(o.best.c3,2)} г/м³ с запасом 1,64σ.`+(near?' Текущая уставка уже оптимальна.':o.cur.c3>0.8?` Без изменения уставки качество выйдет за норму; рекомендация предотвращает потери около ${fmtI(o.eff)} ₸/ч.`:` Экономия около ${fmtI(Math.abs(o.eff))} ₸/ч.`))}
+  else L.push('Оптимизатор режима M4: допустимой уставки нет — холода не хватает или износ слишком велик; нужно снижать нагрузку и устранять причину.');
+  if(d)L.push(d.bad?`Ядро баланса M1: баланс не сходится, неисправный прибор ${d.bad}, смещение ${d.bias>0?'+':''}${fmt(d.bias,1)} %; согласованный расход на входе ${fmt(d.inlet,1)} ± ${fmt(d.sIn,1)} т/ч.`:
+    `Ядро баланса M1: баланс сходится, вход ${fmt(d.inlet,1)} ± ${fmt(d.sIn,1)} т/ч = товарный газ ${fmt(d.x[0],1)} + ШФЛУ ${fmt(d.x[1],2)} + факел ${fmt(d.x[2],2)} т/ч.`);
+  L.push(`Потери продукта сейчас: ${fmtI(lossH())} ₸/ч.`);
+  const sel=st.sel.kind==='s'?`датчик ${st.sel.id} (${S[st.sel.id].name})`:`аппарат ${EQ[st.sel.id].name}`;L.push(`Оператор сейчас смотрит на: ${sel}.`);
+  if(st.sel.kind==='e')L.push(`Про аппарат: ${EQ[st.sel.id].about}`);
+  else if(S[st.sel.id].about)L.push(`Про датчик: ${S[st.sel.id].about}`);
+  if(st.log.length)L.push('Последние события журнала: '+st.log.slice(0,4).map(e=>`${e.t} ${e.src}: ${e.text}`).join(' | '));
+  return L.join('\n')}
+function topicTag(q){const m=q.match(/\b([A-Z]{2,3})-?(\d{3})\b/i);let tag=m?(m[1].toUpperCase()+'-'+m[2]):null;if(tag&&!S[tag])tag=null;
+  if(!tag&&/(этот|него|нему|датчик[еау]?\b|с ним)/i.test(q)&&st.sel.kind==='s')tag=st.sel.id;return tag}
+function factsFor(q,html){const F=[];
+  F.push('Вывод платформы: '+plain(html));
+  const tag=q?topicTag(q):null;
+  if(tag){const s=S[tag],v=st.vals[tag],lm=s.lim||{};
+    F.push(`Датчик ${tag} — ${s.name}: ${fmt(v,s.dec)} ${s.unit}, состояние ${ST_RU[stateOf(tag,v)]}. Уставки: ${['LL','L','H','HH'].filter(k=>lm[k]!=null).map(k=>`${k} ${fmt(lm[k],s.dec)}`).join(', ')||'нет'}.`);
+    F.push(`Прибор: ${s.type}, место: ${s.place}.`);if(s.about)F.push('Назначение: '+s.about)}
+  else if(q&&st.sel.kind==='e'&&/(аппарат|состояни)/i.test(q))F.push(`Аппарат: ${EQ[st.sel.id].name}. ${EQ[st.sel.id].about}`);
+  else if(q&&!/(почему|унос|делать|рекоменд|баланс|расход|ресурс|износ|вибрац|шфлу|чистот|факел)/i.test(q))
+    F.push('Как устроен узел: '+Object.values(EQ).map(e=>`${e.name} — ${e.about}`).join(' '));
+  if(q&&/(почему|унос|делать|рекоменд|шфлу|чистот|свод|режим|уставк)/i.test(q))F.push('Нормы качества: унос C3+ не выше 0,8 г/м³, чистота ШФЛУ не ниже 97 %.');
+  return F.join('\n')}
+function callLLM(payload){const run=()=>{const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),90000);
+    return fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctl.signal}).then(r=>r.json()).finally(()=>clearTimeout(to))};
+  const p=LLM.queue.then(run,run);LLM.queue=p.catch(()=>{});return p}
+function aiLLM(o){if(window.__VIDEO)return vidLLM(o);const who=whoOf(o.msgKind);
+  const d=addMsg('<span class="typing"><i></i><i></i><i></i></span>','a '+(o.msgKind||''),'',who);
+  const ctx=o.facts;
+  const head=`<span class="who">${who} · ${ptime()}</span>`;
+  callLLM({kind:o.kind,question:o.question||'',event:o.event||'',context:ctx,fallback:plain(o.fallbackHTML),ptime:ptime(),scenario:SC_NAMES[st.sc]})
+   .then(r=>{const body=r.fallback?o.fallbackHTML:llmHTML(r.text);
+     const tail=r.fallback?`${o.src} · ${esc(r.model)}`:`${o.src} · Qwen2.5-7B, ${fmt(r.latency_s,1)} с${r.guard&&r.guard.retried?' · переписан после проверки чисел':''}`;
+     d.innerHTML=head+body+`<span class="src">источник: ${tail} · числа сверены с данными узла</span>`})
+   .catch(()=>{d.innerHTML=head+o.fallbackHTML+`<span class="src">источник: ${o.src} · шаблон (сервер не ответил)</span>`})
+   .finally(()=>{d.querySelectorAll('.tl').forEach(t=>t.onclick=()=>select('s',t.dataset.t));msgs.scrollTop=msgs.scrollHeight})}
+function setPill(on,txt,title){const p=$('#llm-pill');p.textContent=txt;p.dataset.st=on?'ok':'';p.title=title||''}
+function health(){if(!/^https?:$/.test(location.protocol)||location.hostname.endsWith('claude.ai')){setPill(false,'шаблоны','Страница открыта без сервера. Запустите START_NTS.bat, чтобы подключить Qwen2.5.');return}
+  fetch('/api/health',{cache:'no-store'}).then(r=>r.json()).then(j=>{const was=LLM.online;LLM.online=!!j.online;
+    setPill(LLM.online,LLM.online?'Qwen2.5-7B · локально':'шаблоны',j.info||'');
+    if(LLM.online&&!was)logE('ИИ','Подключена локальная модель Qwen2.5-7B через Ollama','ai')})
+   .catch(()=>{LLM.online=false;setPill(false,'шаблоны','Сервер не отвечает')})}
+function contrib(){const V=st.vals;const T=st.Tsep,vib=hx.vib.at(-1),foul=hx.foul.at(-1);
+  const parts=[{n:'температура НТС',v:0.32*Math.exp((T+34)/8)},{n:'вибрация К-101',v:1.10*Math.max(0,vib-4.6)/2.4},{n:'загрязнение демистера',v:0.55*foul*foul},{n:'базовый унос',v:0.08}];
+  const tot=parts.reduce((a,b)=>a+b.v,0);return parts.filter(p=>p.v>0.005).map(p=>({n:p.n,p:Math.round(p.v/tot*100)})).sort((a,b)=>b.p-a.p)}
+function answer(q){const s=q.toLowerCase();const V=st.vals,o=st.opt,f=st.fore,d=st.dvr;
+  const m=q.match(/\b([A-Z]{2,3})-?(\d{3})\b/i);let tag=m?(m[1].toUpperCase()+'-'+m[2]):null;if(tag&&!S[tag])tag=null;
+  const eqm=q.match(/([КТХСНK])-?101/i);
+  if(/(этот|него|нему|датчик[еау]?\b|с ним)/.test(s)&&!tag&&st.sel.kind==='s')tag=st.sel.id;
+  if(tag){const S_=S[tag],v=V[tag];const stt=stateOf(tag,v);
+    return [`<p><b>${tag} — ${S_.name}: ${fmt(v,S_.dec)} ${S_.unit}</b>, состояние: ${{ok:'норма',warn:'отклонение',crit:'авария',ai:'на контроле ИИ'}[stt]}. За последний час ${(v-st.hist[tag].at(-7))>=0?'рост':'снижение'} на ${fmt(Math.abs(v-st.hist[tag].at(-7)),S_.dec)} ${S_.unit}.</p><p>${insightFor(tag)}</p><p>Поверка до ${S_.next}, точность ${S_.acc}.</p>`,`${tag} · история 24 ч`]}
+  if(/ресурс|rul|износ|подшип|компрессор|к-101|k-101|вибрац/.test(s)||(eqm&&/[кk]/i.test(eqm[1]))){
+    return [f.rulH!=null?`<p><b>Ресурс подшипника К-101 ≈ ${fmt(f.rulH,0)} ч</b> до вибрации 7,1 мм/с. Сейчас ${fmt(V['VT-101'],2)} мм/с, рост ${fmt(f.sv/TICK_H,2)} мм/с в час.</p><p>${f.tScadaH!=null?`Штатная сигнализация сработает примерно через ${fmt(f.tScadaH,0)} ч, ИИ видит тренд уже сейчас. `:''}Рекомендую ремонт в ближайшее окно и уставку по оптимизатору, чтобы унос не вышел за норму.</p>`:`<p><b>К-101 в норме:</b> вибрация ${fmt(V['VT-101'],2)} мм/с, тренда износа нет, ресурс больше 500 ч. Ток двигателя ${fmt(V['IT-101'],0)} А.</p>`,'VT-101 · IT-101 · модель M2']}
+  if(/баланс|расходомер|невязк|сход|dvr|учёт|учет/.test(s)){
+    if(!d)return ['<p>Накапливаю данные для баланса.</p>',''];
+    return [d.bad?`<p><b>Баланс не сходится: ${tl(d.bad)} показывает на ${d.bias>0?'+':''}${fmt(d.bias,1)} % больше реального.</b> Остальные приборы согласуются между собой.</p><p>Согласованный вход: ${fmt(d.inlet,1)} ± ${fmt(d.sIn,1)} т/ч. Используйте это значение и отправьте ${d.bad} на поверку.</p>`:
+      `<p><b>Баланс узла сходится.</b> Вход ${fmt(d.inlet,1)} ± ${fmt(d.sIn,1)} т/ч = товарный газ ${fmt(d.x[0],1)} + ШФЛУ ${fmt(d.x[1],2)} + факел ${fmt(d.x[2],2)} т/ч.</p><p>χ² = ${fmt(d.chi,1)} при пороге 13,8: грубых ошибок приборов нет.</p>`,'ядро баланса M1 · FT-090, FT-101, FT-104, FT-102, FT-103']}
+  if(/почему|причин|унос|c3|с3|c₃/.test(s)){const c=contrib();
+    return [`<p><b>Унос C₃+ ${fmt(V['AT-101'],2)} ± ${fmt(o.sg,2)} г/м³</b> при норме 0,8.</p><p>Из чего он складывается сейчас: ${c.map(x=>`${x.n} — ${x.p} %`).join(', ')}.</p><p>${c[0].n==='температура НТС'?'Главный рычаг — температура сепарации '+tl('TT-104')+'.':c[0].n==='вибрация К-101'?'Главная причина — пульсации от '+tl('VT-101')+': брызгоунос через демистер.':'Главная причина — загрязнение демистера, см. '+tl('PDT-101')+'.'}</p>`,'AT-101 · модель M3']}
+  if(/шфлу|чистот/.test(s))return [`<p><b>Чистота ШФЛУ ${fmt(V['AT-102'],2)} %</b> при норме ≥ 97. Расход ШФЛУ ${fmt(V['FT-102'],2)} т/ч.</p><p>${insightFor('AT-102')}</p>`,'AT-102 · FT-102'];
+  if(/факел|co2|co₂|выброс/.test(s))return [`<p><b>Расход на факел ${fmt(V['FT-103'],2)} т/ч</b> (прибор ±10 %; ядро баланса уточняет до ${fmt(d?d.x[2]:V['FT-103'],2)} т/ч).</p><p>${V['AT-101']>0.8?'Рост связан с некондицией товарного газа.':'Это фоновый сброс, связи с отклонениями качества нет.'}</p>`,'FT-103 · ядро баланса M1'];
+  if(/делать|рекоменд|совет|уставк|оптим|режим/.test(s)){
+    if(!o.best)return [`<p><b>Режимом проблему не решить:</b> при ${fmt(V['TT-103'],1)} °C на пропане холода не хватает для нормы по уносу.</p><p>Порядок: снизить нагрузку по газу, перейти на резервный холод, проверить Х-101.</p>`,'оптимизатор M4'];
+    const near=Math.abs(o.best.T-st.sp)<0.3;
+    const ahead=(()=>{if(f.breachH==null)return null;const k=f.breachH/TICK_H+3;const o2=optimizeAt(f.v0+f.sv*k,Math.min(1,f.f0+f.sf*k),f.t0+f.stt*k);return o2.best?o2.best.T:null})();
+    return [near?(f.breachH!=null?`<p><b>Сейчас уставка ${fmt(st.sp,1)} °C ещё оптимальна, но через ≈ ${fmt(f.breachH,0)} ч качество выйдет за норму.</b> ${ahead!=null?`Готовьтесь понизить уставку ${tl('TT-104')} примерно до ${fmt(ahead,1)} °C — оптимизатор предложит это заранее.`:'Режимом это не удержать.'}</p>`+(f.rulH!=null?`<p>Главное — запланировать ремонт К-101: ресурс подшипника ≈ ${fmt(f.rulH,0)} ч.</p>`:''):`<p><b>Менять режим не нужно:</b> уставка ${fmt(st.sp,1)} °C оптимальна с учётом трендов. Унос ${fmt(V['AT-101'],2)} г/м³.</p>`):`<p><b>Уставку ${tl('TT-104')}: ${fmt(st.sp,1)} → ${fmt(o.best.T,1)} °C.</b> Ожидаемый унос ${fmt(o.best.c3,2)} г/м³, в норме с запасом 1,64σ. ${o.cur.c3>0.8?`Это предотвращает некондицию и потери ≈ ${fmtI(o.eff)} ₸/ч.`:`Экономия ≈ ${fmtI(Math.abs(o.eff))} ₸/ч.`}</p>`+
+      (f.rulH!=null?`<p>Параллельно — ремонт К-101, ресурс ≈ ${fmt(f.rulH,0)} ч.</p>`:'')+(d&&d.bad?`<p>И поверка ${tl(d.bad)}.</p>`:''),'оптимизатор M4 · прогноз M3']}
+  // сводка
+  const issues=[];if(f.rulH!=null)issues.push(`износ подшипника К-101 (ресурс ≈ ${fmt(f.rulH,0)} ч)`);if(slope(st.hist['PDT-101'])>0.02)issues.push('забивается демистер С-101');if(V['TT-103']>-41.5)issues.push('теплеет пропан в Х-101');if(d&&d.bad)issues.push(`неисправен ${d.bad}`);
+  return [`<p><b>${issues.length?'Есть отклонения: '+issues.join('; ')+'.':'Узел работает в норме.'}</b></p><p>Температура сепарации ${fmt(V['TT-104'],1)} °C (SP ${fmt(st.sp,1)}). Унос C₃+ ${fmt(V['AT-101'],2)} г/м³, чистота ШФЛУ ${fmt(V['AT-102'],2)} %. ${f.breachH!=null?`Прогноз выхода за норму: ≈ ${fmt(f.breachH,0)} ч.`:'В ближайшие 24 ч рисков по качеству не видно.'}</p>`,'все датчики узла · M1–M4']}
+function ask(q){if(!q.trim())return;addMsg(`<p>${q.replace(/</g,'&lt;')}</p>`,'u');
+  if(LLM.online){const [h,src]=answer(q);aiLLM({kind:'chat',question:q,facts:factsFor(q,h),fallbackHTML:h,msgKind:'',src});return}
+  const t=addMsg('<span class="typing"><i></i><i></i><i></i></span>','a','', 'ИИ-технолог');
+  setTimeout(()=>{t.remove();const [h,src]=answer(q);ai(h,'',src)},650)}
+$('#ask').addEventListener('submit',e=>{e.preventDefault();const q=$('#q').value;$('#q').value='';ask(q)});
+$('#quick').addEventListener('click',e=>{const b=e.target.closest('button');if(b)ask(b.dataset.q)});
+
+/* ---------- управление ---------- */
+function setScenario(sc){st.sc=sc;st.wear=0;st.foul=0;st.chill=0;st.drift=0;st.sp=-33;
+  for(const k of Object.keys(st.flags))if(k!=='chiN')delete st.flags[k];
+  document.querySelectorAll('[data-sc]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.sc===sc)));
+  const names={normal:'штатный режим',bearing:'износ подшипника К-101',fouling:'забивка демистера С-101',chiller:'отказ холодильника Х-101',drift:'дрейф расходомера FT-101'};
+  logE('Сценарий',`Запущен сценарий: ${names[sc]}`,'bal');
+  if(sc!=='normal')ai(`<p>Сценарий «${names[sc]}» запущен. Слежу за узлом и напишу сам, как только увижу отклонение.</p>`,'','симулятор');
+}
+document.querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>setScenario(b.dataset.sc));
+let timer=null;
+function setSpeed(sp){st.speed=sp;document.querySelectorAll('[data-sp]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.sp===sp)));
+  clearInterval(timer);if(sp>0)timer=setInterval(()=>{step();renderAll()},1000/sp)}
+document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>setSpeed(+b.dataset.sp));
+function renderAll(){renderScheme();renderKPI();renderOpt();renderCard()}
+
+/* ---------- старт: сутки истории в норме ---------- */
+buildInsts();
+for(let i=0;i<H;i++)step();
+st.tick=0;st.log=[];for(const k of Object.keys(st.flags))if(k!=='chiN')delete st.flags[k];
+renderAll();renderLog();
+ai(`<p><b>Узел НТС-1 под наблюдением.</b> Температура сепарации ${fmt(st.vals['TT-104'],1)} °C, унос C₃+ ${fmt(st.vals['AT-101'],2)} г/м³, чистота ШФЛУ ${fmt(st.vals['AT-102'],2)} %. Баланс узла сходится.</p><p>Нажмите на любой датчик на схеме или спросите меня. Если что-то пойдёт не так, я напишу сам.</p>`,'','все датчики узла');
+if(window.__VIDEO){videoMode()}else{setSpeed(1);health();setInterval(health,30000);}
+
+/* ================= режим съёмки демо-видео (включается только из скрипта записи) ================= */
+function vidLLM(o){const V=window.__VIDEO;const who=whoOf(o.msgKind);
+  const facts=o.facts;const idx=V.calls.length;
+  V.calls.push({kind:o.kind,question:o.question||'',event:o.event||'',context:facts,fallback:plain(o.fallbackHTML),ptime:ptime()});
+  const ans=(V.answers||[])[idx];
+  const text=ans&&!ans.fallback?ans.text:plain(o.fallbackHTML);
+  const tail=ans&&!ans.fallback?`${o.src} · Qwen2.5-7B, ${fmt(ans.latency_s,1)} с${ans.guard&&ans.guard.retried?' · переписан после проверки чисел':''}`:`${o.src} · ${ans?esc(ans.model):'шаблон'}`;
+  const d=addMsg('<span class="typing"><i></i><i></i><i></i></span>','a '+(o.msgKind||''),'',who);
+  V.pending.push({el:d,head:`<span class="who">${who} · ${ptime()}</span>`,text,tail,t0:null});
+}
+function videoMode(){const V=window.__VIDEO;V.calls=[];V.pending=[];LLM.online=true;setPill(true,'Qwen2.5-7B · локально','');
+  const root=document.documentElement;root.classList.add('vid');
+  const css=document.createElement('style');css.textContent=`
+  .vid,.vid body{overflow:hidden!important}
+  .vid *{animation:none!important;transition:none!important}
+  .vid body{transform-origin:0 0;will-change:transform}
+  .vid .side{position:static}
+  .vid .chat{height:430px}
+  #ov{position:fixed;inset:0;pointer-events:none;z-index:99;font-family:var(--f-body)}
+  #ov [hidden],#ov[hidden]{display:none!important}
+  #ov .lt{position:absolute;left:34px;bottom:30px;display:flex;align-items:stretch;max-width:760px;filter:drop-shadow(0 10px 30px rgba(0,0,0,.45))}
+  #ov .lt .bar{width:7px;background:#8f7bff;border-radius:2px}
+  #ov .lt .box{background:rgba(12,14,18,.92);padding:12px 20px 14px 18px;border-radius:0 6px 6px 0}
+  #ov .lt .k{font-family:var(--f-label);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#a99bff;font-weight:600}
+  #ov .lt .h{font-family:var(--f-label);font-size:34px;line-height:1.08;font-weight:600;color:#fff;margin-top:3px}
+  #ov .lt .h b{color:#b8acff}
+  #ov .lt .s{font-size:16px;color:#c9ced6;margin-top:6px}
+  #ov .badge{position:absolute;right:26px;top:22px;background:rgba(12,14,18,.9);color:#e8eaee;font-family:var(--f-num);font-size:13px;padding:7px 12px;border-radius:6px;border:1px solid #3a3f4a;display:flex;gap:8px;align-items:center}
+  #ov .badge i{width:8px;height:8px;border-radius:50%;background:#ff5a52;display:inline-block}
+  #ov .ring{position:absolute;border:3px solid #9d8cff;border-radius:10px;box-shadow:0 0 0 6px rgba(157,140,255,.22),0 0 30px rgba(157,140,255,.55)}
+  #ov .tag{position:absolute;background:#9d8cff;color:#0e0f14;font-family:var(--f-label);font-weight:600;font-size:15px;padding:5px 10px;border-radius:5px;white-space:nowrap}
+  #ov .center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(10,12,16,.72)}
+  #ov .center .a{font-family:var(--f-label);font-weight:600;color:#fff;font-size:52px;letter-spacing:.01em;text-align:center}
+  #ov .center .a b{color:#b3a6ff}
+  #ov .center .b{font-family:var(--f-label);font-weight:500;color:#c9ced6;font-size:24px;text-align:center}
+  #ov .title{position:absolute;inset:0;background:#0d1014;display:flex;flex-direction:column;justify-content:center;padding-left:110px;overflow:hidden}
+  #ov .title .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:40px 40px}
+  #ov .title .k{position:relative;font-family:var(--f-label);font-size:17px;letter-spacing:.22em;color:#a99bff;font-weight:600;text-transform:uppercase}
+  #ov .title .w{position:relative;font-family:var(--f-label);font-size:92px;font-weight:600;color:#fff;line-height:1;margin-top:14px;letter-spacing:-.01em}
+  #ov .title .w b{color:#a99bff}
+  #ov .title .line{position:relative;height:5px;background:#8f7bff;margin-top:22px;border-radius:3px}
+  #ov .title .s{position:relative;font-size:24px;color:#c9ced6;margin-top:18px;font-family:var(--f-body)}
+  #ov .title .s2{position:relative;font-size:16px;color:#8d95a1;margin-top:26px;font-family:var(--f-num)}
+  #ov .cur{position:absolute;width:26px;height:26px;margin:-3px 0 0 -3px}
+  #ov .rip{position:absolute;border:3px solid #fff;border-radius:50%}
+  .vid .m .caret{display:inline-block;width:8px;height:15px;background:var(--ai);vertical-align:-2px;margin-left:2px}`;
+  document.head.appendChild(css);
+  const ov=document.createElement('div');ov.id='ov';root.appendChild(ov);
+  ov.innerHTML=`<div class="title" id="o-title" hidden></div><div class="center" id="o-center" hidden></div><div class="badge" id="o-badge" hidden></div><div id="o-rings"></div><div class="lt" id="o-lt" hidden><div class="bar"></div><div class="box"><div class="k"></div><div class="h"></div><div class="s"></div></div></div>
+    <svg class="cur" id="o-cur" viewBox="0 0 26 26" hidden><path d="M3 2L3 21L8.2 16.4L11.6 24L15 22.5L11.7 15.1L18.6 15.1Z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg><div class="rip" id="o-rip" hidden></div>`;
+  setSpeed(0);
+  const VW=innerWidth,VH=innerHeight;
+  const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2, out=x=>1-Math.pow(1-x,3);
+  // ----- камера: body transform, прямоугольники в координатах документа
+  let cam={x:0,y:0,s:1},camFrom=null,camTo=null,camT0=0,camDur=1;
+  const docRect=sel=>{const els=[].concat(sel).flatMap(q=>[...document.querySelectorAll(q)]);let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    els.forEach(e=>{const r=e.getBoundingClientRect();const a=(r.left-cam.x)/cam.s,b=(r.top-cam.y)/cam.s,c=(r.right-cam.x)/cam.s,d=(r.bottom-cam.y)/cam.s;x0=Math.min(x0,a);y0=Math.min(y0,b);x1=Math.max(x1,c);y1=Math.max(y1,d)});return {x:x0,y:y0,w:x1-x0,h:y1-y0}};
+  const fit=(r,pad,maxS)=>{const s=Math.min((VW-2*pad)/r.w,(VH-2*pad)/r.h,maxS||2.2);return {s,x:VW/2-(r.x+r.w/2)*s,y:VH/2-(r.y+r.h/2)*s}};
+  const applyCam=()=>{document.body.style.transform=`translate(${cam.x}px,${cam.y}px) scale(${cam.s})`};
+  // ----- курсор
+  let cur={x:VW*0.62,y:VH*0.55,vis:false},curFrom=null,curSel=null,curT0=0,curDur=1;
+  const center=sel=>{const e=document.querySelector(sel);const r=e.getBoundingClientRect();const c=e.matches('.inst')?e.querySelector('circle.b').getBoundingClientRect():r;return {x:c.left+c.width/2,y:c.top+c.height/2}};
+  let rip=null;
+  // ----- подсветки
+  let rings=[];
+  // ----- тики симулятора
+  let rate=0,acc=0,lastT=0;
+  const A=V.timeline.slice().sort((a,b)=>a.t-b.t);let ai_=0;
+  const lt=$('#o-lt'),ttl=$('#o-title'),ctr=$('#o-center'),badge=$('#o-badge');
+  let ltT0=-1,ltT1=-1,ctrT0=-1,ctrT1=-1,ttlMode=null,ttlT0=0;
+  function run(a,t){switch(a.type){
+    case 'cam':{const r=docRect(a.sel);camFrom={...cam};camTo=fit(r,a.pad||24,a.max);camT0=t;camDur=a.dur||1.2;break}
+    case 'cursor':{cur.vis=true;curFrom={x:cur.x,y:cur.y};curSel=a.sel;curT0=t;curDur=a.dur||0.8;break}
+    case 'hidecursor':cur.vis=false;break;
+    case 'click':{const e=document.querySelector(a.sel);const p=center(a.sel);cur.x=p.x;cur.y=p.y;rip={x:p.x,y:p.y,t0:t};
+      if(e.tagName==='BUTTON'||e.closest('button'))(e.closest('button')||e).click();else e.dispatchEvent(new MouseEvent('click',{bubbles:true}));break}
+    case 'rate':rate=a.v;break;
+    case 'ticks':for(let i=0;i<a.n;i++){step()}renderAll();break;
+    case 'lt':{lt.querySelector('.k').textContent=a.k||'';lt.querySelector('.h').innerHTML=a.h;lt.querySelector('.s').textContent=a.s||'';lt.querySelector('.s').hidden=!a.s;ltT0=t;ltT1=t+(a.dur||3.5);break}
+    case 'center':{ctr.innerHTML=`<div class="a">${a.a}</div>${a.b?`<div class="b">${a.b}</div>`:''}`;ctrT0=t;ctrT1=t+(a.dur||2.5);break}
+    case 'title':{ttl.innerHTML=a.html;ttlMode=a.mode;ttlT0=t;ttl.hidden=false;break}
+    case 'badge':{if(a.text){badge.innerHTML=`<i></i>${a.text}`;badge.hidden=false}else badge.hidden=true;break}
+    case 'ring':{rings.push({sel:a.sel,t0:t,t1:t+(a.dur||2.5),label:a.label||'',pos:a.pos||'top'});break}
+    case 'type':{const inp=$('#q');inp.value='';V.typing={text:a.text,t0:t,dur:a.dur||1.0};break}
+    case 'submit':{const q=$('#q').value;$('#q').value='';V.typing=null;ask(q);break}
+    case 'js':{(new Function('st','api',a.code))(st,API);break}
+  }}
+  const API={step,renderAll,setScenario,select};
+  window.__demo={frame(i){const t=i/30;
+    while(ai_<A.length&&A[ai_].t<=t+1e-9){run(A[ai_],t);ai_++}
+    // ticks
+    const dt=t-lastT;lastT=t;if(rate>0){acc+=rate*dt;let n=0;while(acc>=1){acc-=1;step();n++}if(n)renderAll()}
+    // camera
+    if(camTo){const k=Math.min(1,(t-camT0)/camDur),e=ease(k);cam={x:camFrom.x+(camTo.x-camFrom.x)*e,y:camFrom.y+(camTo.y-camFrom.y)*e,s:camFrom.s+(camTo.s-camFrom.s)*e};if(k>=1){cam={...camTo};camTo=null}}
+    applyCam();
+    // typed question
+    if(V.typing){const k=Math.min(1,(t-V.typing.t0)/V.typing.dur);$('#q').value=V.typing.text.slice(0,Math.round(V.typing.text.length*k))}
+    // cursor
+    const ce=$('#o-cur');if(cur.vis){if(curSel){const p=center(curSel);const k=Math.min(1,(t-curT0)/curDur),e=ease(k);cur.x=curFrom.x+(p.x-curFrom.x)*e;cur.y=curFrom.y+(p.y-curFrom.y)*e;if(k>=1)curFrom={x:p.x,y:p.y},curT0=t-curDur}
+      ce.hidden=false;ce.style.left=cur.x+'px';ce.style.top=cur.y+'px';const pressed=rip&&t-rip.t0<0.12;ce.style.transform=pressed?'scale(.86)':'none'}else ce.hidden=true;
+    const re=$('#o-rip');if(rip&&t-rip.t0<0.55){const k=(t-rip.t0)/0.55,R=8+34*out(k);re.hidden=false;Object.assign(re.style,{left:(rip.x-R)+'px',top:(rip.y-R)+'px',width:2*R+'px',height:2*R+'px',opacity:String(1-k)})}else re.hidden=true;
+    // lower third
+    if(t>=ltT0&&t<ltT1){const a=Math.min(1,(t-ltT0)/0.35),b=Math.min(1,(ltT1-t)/0.3);lt.hidden=false;lt.style.opacity=String(Math.min(a,b));lt.style.transform=`translateX(${(1-out(a))*-60}px)`}else lt.hidden=true;
+    if(t>=ctrT0&&t<ctrT1){const a=Math.min(1,(t-ctrT0)/0.3),b=Math.min(1,(ctrT1-t)/0.3);ctr.hidden=false;ctr.style.opacity=String(Math.min(a,b));ctr.firstChild.style.transform=`scale(${0.92+0.08*out(a)})`}else ctr.hidden=true;
+    // title card
+    if(!ttl.hidden){const k=t-ttlT0;const w=ttl.querySelector('.w'),ln=ttl.querySelector('.line'),kk=ttl.querySelector('.k'),s1=ttl.querySelector('.s'),s2=ttl.querySelector('.s2');
+      const ap=(el,d)=>{if(!el)return;const x=Math.max(0,Math.min(1,(k-d)/0.45));el.style.opacity=String(x);el.style.transform=`translateY(${(1-out(x))*26}px)`};
+      ap(kk,0.05);ap(w,0.15);ap(s1,0.45);ap(s2,0.65);if(ln)ln.style.width=(Math.max(0,Math.min(1,(k-0.3)/0.6))*560)+'px';
+      if(ttlMode==='intro'){const fo=Math.max(0,Math.min(1,(k-1.55)/0.45));ttl.style.opacity=String(1-fo);ttl.style.transform=`scale(${1+0.06*fo})`;if(fo>=1)ttl.hidden=true}else{const fi=Math.min(1,k/0.5);ttl.style.opacity=String(fi);ttl.style.transform='none'}}
+    // rings
+    const rw=$('#o-rings');rw.innerHTML='';rings=rings.filter(r=>t<r.t1);rings.forEach(r=>{const els=[...document.querySelectorAll(r.sel)];if(!els.length)return;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;els.forEach(e=>{const b=e.getBoundingClientRect();x0=Math.min(x0,b.left);y0=Math.min(y0,b.top);x1=Math.max(x1,b.right);y1=Math.max(y1,b.bottom)});
+      const a=Math.min(1,(t-r.t0)/0.25),b=Math.min(1,(r.t1-t)/0.25),o=Math.min(a,b),pad=6+3*Math.sin((t-r.t0)*6);
+      rw.insertAdjacentHTML('beforeend',`<div class="ring" style="left:${x0-pad}px;top:${y0-pad}px;width:${x1-x0+2*pad}px;height:${y1-y0+2*pad}px;opacity:${o}"></div>`+(r.label?`<div class="tag" style="left:${x0-pad}px;top:${r.pos==='top'?y0-pad-34:y1+pad+8}px;opacity:${o}">${r.label}</div>`:''))});
+    // живые анимации вместо CSS
+    document.querySelectorAll('.flow').forEach(f=>{const per=f.classList.contains('slow')?2.6:1.4;f.style.strokeDashoffset=String(-((t/per)*18)%18)});
+    const fl=st.vals['FT-103']||0.3;$('#flame').style.transform=`scale(${clamp(0.8+fl*0.4,0.8,2.2)*(1+0.06*Math.sin(t*11))},${clamp(0.8+fl*0.4,0.8,2.2)*(1+0.12*Math.sin(t*7.3))})`;
+    document.querySelectorAll('.inst[data-st="crit"] .alm').forEach(a=>a.style.opacity=(Math.floor(t*2)%2)?'.25':'1');
+    document.querySelectorAll('.typing i').forEach((d,j)=>d.style.opacity=String(0.25+0.75*(0.5+0.5*Math.sin(t*9-j*0.9))));
+    // печатающиеся ответы ИИ
+    V.pending.forEach(p=>{if(p.t0==null)p.t0=t;const k=t-p.t0-0.9;if(k<0)return;const n=Math.min(p.text.length,Math.floor(k*62));
+      p.el.innerHTML=p.head+llmHTML(p.text.slice(0,n)).replace(/<\/p>$/,n<p.text.length?'<span class="caret"></span></p>':'</p>')+(n>=p.text.length?`<span class="src">источник: ${p.tail} · числа сверены с данными узла</span>`:'');
+      if(n>=p.text.length){p.done=true;p.el.querySelectorAll('.tl').forEach(x=>x.onclick=()=>select('s',x.dataset.t))}msgs.scrollTop=msgs.scrollHeight});
+    V.pending=V.pending.filter(p=>!p.done);
+    return {tick:st.tick,ai:Object.keys(st.flags).filter(k=>/^(ai|dvr|sc|c3)/.test(k)),fore:st.fore,opt:st.opt&&st.opt.best&&st.opt.best.T,sp:st.sp,vals:{vib:st.vals['VT-101'],c3:st.vals['AT-101'],ft101:st.vals['FT-101']},dvr:st.dvr&&st.dvr.bad,bias:st.dvr&&st.dvr.bias,calls:V.calls.length}}};
+  // стартовый вид
+  const r=docRect(V.startCam||['.top','.kpis','#scheme']);cam=fit(r,16,1.4);applyCam();
+}
+})();
+</script>
+</body></html>

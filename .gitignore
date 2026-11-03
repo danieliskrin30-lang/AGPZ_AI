@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Обученные модели пересоздаются командой: python proto/run_proto.py
+*.joblib
+
+# Логи, отчёты и рабочие файлы
+*.log
+_*.txt
+_*.py
+demo/llm_log.json
+
+# Медиа для видео и презентации — не для репозитория
+*.mp4
+*.mp3
+demo/voice/
+
+# Личные и рабочие заметки
+BRIEF_FOR_CLAUDE.md
+AGENTS.md
+Сценарий*
+
+# Система
+.DS_Store
+Thumbs.db
+desktop.ini
